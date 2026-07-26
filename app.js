@@ -26,9 +26,10 @@ function uwPerUmolFactor(wavelengthNm) {
     if (!wavelengthNm || wavelengthNm <= 0) return 0;
     return 11960 / wavelengthNm;   // μW·cm⁻² per µmol·m⁻²·s⁻¹
 }
-// DUMMY placeholder calibration — an obvious 0→100 linear ramp per channel.
-// These are NOT real measurements; the user must recalibrate every dataset
-// (top/bottom × µmol / µW·cm⁻²) on the Calibration tab.
+// DUMMY placeholder calibration — distinct values per side/unit so the user
+// can see numerical differences when toggling settings. These are NOT real
+// measurements; the user must recalibrate every dataset (top/bottom × µmol /
+// µW·cm⁻²) on the Calibration tab. An `isDummy` flag marks uncalibrated data.
 // ── Illumination geometry (Top vs Bottom) ──────────────────────────────────
 //  The light box can be used two ways and the LED-to-sample distance differs
 //  slightly between them, so each geometry keeps its OWN calibration:
@@ -38,27 +39,53 @@ function uwPerUmolFactor(wavelengthNm) {
 //                  display, is saved with presets, and logged with each run.
 //  `calEditSide` = which geometry the Calibration tab is currently editing —
 //                  independent of the active side.
-function dummyCalPoints() {
-    // Obvious placeholder ramp (0→100), identical on every channel.
-    return {
-        ch1: [[0, 0], [1024, 25], [2048, 50], [3072, 75], [4095, 100]],
-        ch2: [[0, 0], [1024, 25], [2048, 50], [3072, 75], [4095, 100]],
-        ch3: [[0, 0], [1024, 25], [2048, 50], [3072, 75], [4095, 100]],
+function dummyCalPoints(side, unit) {
+    // Distinct dummy data per side/unit so differences are visible.
+    // All are clearly fake (round numbers, linear ramps) but differ enough
+    // that switching side or unit shows a change.
+    const scales = {
+        "top.umol":    { ch1: 150, ch2: 200, ch3: 80 },
+        "top.uwcm2":   { ch1: 3300, ch2: 4400, ch3: 1760 },
+        "bottom.umol": { ch1: 120, ch2: 170, ch3: 60 },
+        "bottom.uwcm2":{ ch1: 2640, ch2: 3740, ch3: 1320 },
     };
+    const key = side + "." + unit;
+    const s = scales[key] || scales["top.umol"];
+    const ramp = (max) => [[0, 0], [1024, Math.round(max * 0.25)], [2048, Math.round(max * 0.5)], [3072, Math.round(max * 0.75)], [4095, max]];
+    return { ch1: ramp(s.ch1), ch2: ramp(s.ch2), ch3: ramp(s.ch3) };
 }
-function defaultCalUnitData() {
-    return { mode: "linear", points: dummyCalPoints(), coeffs: { ch1: null, ch2: null, ch3: null } };
+function defaultCalUnitData(side, unit) {
+    return { mode: "linear", points: dummyCalPoints(side, unit), coeffs: { ch1: null, ch2: null, ch3: null }, isDummy: true };
 }
-function defaultCalSide() {
-    return { umol: defaultCalUnitData(), uwcm2: defaultCalUnitData() };
+function defaultCalSide(side) {
+    return { umol: defaultCalUnitData(side, "umol"), uwcm2: defaultCalUnitData(side, "uwcm2") };
 }
-// Per-geometry, per-unit calibration store. Every dataset ships with the same
-// obvious dummy ramp so it is clear the user still needs to calibrate.
+// Per-geometry, per-unit calibration store.
 // calStore[side][unit]  where side = "top"|"bottom", unit = "umol"|"uwcm2"
 let calStore = {
-    top:    { umol: defaultCalUnitData(), uwcm2: defaultCalUnitData() },
-    bottom: { umol: defaultCalUnitData(), uwcm2: defaultCalUnitData() },
+    top:    defaultCalSide("top"),
+    bottom: defaultCalSide("bottom"),
 };
+
+// Check if the current side+unit calibration is still dummy (uncalibrated).
+function isCalDummy(side = illumSide, unit = displayUnit) {
+    const c = calStore[side][unit];
+    return !c || c.isDummy === true;
+}
+
+// Show/hide the uncalibrated warning banner on the Calibration tab.
+function updateCalWarning() {
+    const warn = $("#calWarning");
+    if (!warn) return;
+    const dummy = isCalDummy(calEditSide);
+    warn.classList.toggle("hidden", !dummy);
+    if (dummy) {
+        const sideEl = $("#calWarningSide");
+        const unitEl = $("#calWarningUnit");
+        if (sideEl) sideEl.textContent = calEditSide === "top" ? "top" : "bottom";
+        if (unitEl) unitEl.textContent = getUnitLabel();
+    }
+}
 
 // Get the calibration data object for the given side and current display unit.
 function getCurrentCal(side) { return calStore[side][displayUnit]; }
@@ -143,6 +170,48 @@ function pwmToDisplayString(channel, pwm, side = illumSide) {
     return val.toFixed(2) + " " + getUnitLabel();
 }
 
+// Inverse: irradiance → PWM using the calibration data for the current display unit.
+// Used by the Setup tab so the user can type an intensity value and get the
+// corresponding PWM.  Returns NaN if no calibration is available.
+function calValueToPwm(channel, irradiance, side = illumSide) {
+    const c = getCurrentCal(side);
+    const pts = c.points[channel];
+    if (!pts || pts.length === 0) return NaN;
+
+    if (irradiance <= 0) return 0;
+
+    // Power law mode: irradiance = a * PWM^b  →  PWM = (irradiance / a)^(1/b)
+    if (c.mode === "power" && c.coeffs[channel]) {
+        const { a, b } = c.coeffs[channel];
+        if (a <= 0 || b === 0) return NaN;
+        const pwm = Math.pow(irradiance / a, 1 / b);
+        return Math.max(0, Math.min(PWM_MAX, Math.round(pwm)));
+    }
+
+    // Piecewise-linear mode — invert the interpolation.
+    const sorted = [...pts].sort((a, b) => a[0] - b[0]);
+    if (sorted.length === 1) return sorted[0][0];
+
+    for (let i = 0; i < sorted.length - 1; i++) {
+        const [p0, v0] = sorted[i];
+        const [p1, v1] = sorted[i + 1];
+        const lo = Math.min(v0, v1), hi = Math.max(v0, v1);
+        if (irradiance >= lo && irradiance <= hi) {
+            if (v1 === v0) return p0;
+            const t = (irradiance - v0) / (v1 - v0);
+            return Math.round(p0 + t * (p1 - p0));
+        }
+    }
+
+    // Extrapolate using last segment slope
+    const [lp0, lv0] = sorted[sorted.length - 2];
+    const [lp1, lv1] = sorted[sorted.length - 1];
+    if (lv1 === lv0) return PWM_MAX;
+    const slope = (lp1 - lp0) / (lv1 - lv0);
+    const pwm = lp1 + slope * (irradiance - lv1);
+    return Math.max(0, Math.min(PWM_MAX, Math.round(pwm)));
+}
+
 // ── DOM refs ────────────────────────────────────────────────────────────────
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -150,9 +219,9 @@ const $$ = (sel) => document.querySelectorAll(sel);
 const slider1 = $("#slider1"), num1 = $("#num1"), sci1 = $("#sci1");
 const slider2 = $("#slider2"), num2 = $("#num2"), sci2 = $("#sci2");
 const slider3 = $("#slider3"), num3 = $("#num3"), sci3 = $("#sci3");
-const sciUnit1 = $("#sciUnit1"), sciConverted1 = $("#sciConverted1");
-const sciUnit2 = $("#sciUnit2"), sciConverted2 = $("#sciConverted2");
-const sciUnit3 = $("#sciUnit3"), sciConverted3 = $("#sciConverted3");
+const sciLabel1 = $("#sciLabel1"), sciConverted1 = $("#sciConverted1");
+const sciLabel2 = $("#sciLabel2"), sciConverted2 = $("#sciConverted2");
+const sciLabel3 = $("#sciLabel3"), sciConverted3 = $("#sciConverted3");
 
 const pulseOnH   = $("#pulseOnH"),  pulseOnM   = $("#pulseOnM");
 const pulseOnS   = $("#pulseOnS"),  pulseOnMsF = $("#pulseOnMs");
@@ -196,10 +265,12 @@ let channelDefs = JSON.parse(JSON.stringify(DEFAULT_CHANNEL_DEFS));
 // ── State ───────────────────────────────────────────────────────────────────
 let currentMode = "constant";
 let isRunning   = false;
+// Defaults use intensityMax (not PWM_MAX) so a fresh program never starts out
+// above the user's configured slider range.
 let seqPhases   = [
-    { ch1: PWM_MAX, ch2: 0,        ch3: 0, dur: 1000 },
-    { ch1: 0,        ch2: PWM_MAX, ch3: 0, dur: 1000 },
-    { ch1: 0,        ch2: 0,        ch3: 0, dur: 500  },
+    { ch1: intensityMax, ch2: 0,            ch3: 0, dur: 1000 },
+    { ch1: 0,            ch2: intensityMax, ch3: 0, dur: 1000 },
+    { ch1: 0,            ch2: 0,            ch3: 0, dur: 500  },
 ];
 
 // ── Tabs ────────────────────────────────────────────────────────────────────
@@ -260,6 +331,20 @@ function applyIntensityMax() {
         if (+el.value !== v) el.value = v;
     });
     onColorUpdate();
+    // Sequential phases keep their PWM values in JS state, so clamp them too —
+    // otherwise a lowered range would silently send out-of-range values.
+    if (typeof seqPhases !== "undefined" && Array.isArray(seqPhases)) {
+        let changed = false;
+        seqPhases.forEach(p => {
+            ["ch1", "ch2", "ch3"].forEach(ch => {
+                const v = Math.min(p[ch] | 0, intensityMax);
+                if (p[ch] !== v) { p[ch] = v; changed = true; }
+            });
+        });
+        // Always re-render: the max attribute and title of every PWM input change.
+        if (typeof renderSeqPhases === "function") renderSeqPhases();
+        if (changed) toast(`Sequential steps clamped to ${intensityMax}`);
+    }
     // Mirror the clamped values to the live-preview read-outs and send if live mode is on.
     ids.filter(id => id.startsWith("liveCh")).forEach(id => {
         const el = $(`#${id}`);
@@ -289,17 +374,24 @@ function hexToRgb(hex) {
 
 function onColorUpdate() {
     const r = clamp12(slider1.value), g = clamp12(slider2.value), b = clamp12(slider3.value);
-    num1.value = r;
-    num2.value = g;
-    num3.value = b;
+    // Don't clobber PWM num fields if the user is typing in a sci field
+    const activeEl = document.activeElement;
+    const sciFocused = activeEl === sci1 || activeEl === sci2 || activeEl === sci3;
+    if (!sciFocused) {
+        num1.value = r;
+        num2.value = g;
+        num3.value = b;
+    }
 
     const unitLbl = getUnitLabel();
     const otherUnitLabel = displayUnit === "umol" ? UPCM_UNIT : UMOL_UNIT;
 
-    const setSci = (sciEl, unitEl, convEl, ch, pwm) => {
+    const setSci = (sciEl, labelEl, convEl, ch, pwm) => {
+        // Don't overwrite the field the user is actively typing in
+        if (document.activeElement === sciEl) return;
         const dispVal = pwmToDisplayValue(ch, pwm);
         sciEl.value = isNaN(dispVal) ? 0 : dispVal.toFixed(2);
-        unitEl.textContent = unitLbl;
+        labelEl.textContent = unitLbl;
         // Show converted value in parentheses using physical wavelength factor
         const wl = channelDefs[ch]?.wavelength || 0;
         if (wl && !isNaN(dispVal)) {
@@ -310,9 +402,9 @@ function onColorUpdate() {
             convEl.textContent = "";
         }
     };
-    setSci(sci1, sciUnit1, sciConverted1, "ch1", r);
-    setSci(sci2, sciUnit2, sciConverted2, "ch2", g);
-    setSci(sci3, sciUnit3, sciConverted3, "ch3", b);
+    setSci(sci1, sciLabel1, sciConverted1, "ch1", r);
+    setSci(sci2, sciLabel2, sciConverted2, "ch2", g);
+    setSci(sci3, sciLabel3, sciConverted3, "ch3", b);
 
     // High-intensity warning (PWM > 3000)
     num1.classList.toggle("high-intensity", r > 3000);
@@ -334,6 +426,49 @@ slider3.addEventListener("input", onColorUpdate);
 num1.addEventListener("input", onNumInput);
 num2.addEventListener("input", onNumInput);
 num3.addEventListener("input", onNumInput);
+
+// ── Intensity (sci) field edits → back-calculate PWM ─────────────────────
+//  When the user types an irradiance value, convert it to PWM via the
+//  calibration data and update the slider + PWM number field.  The converted
+//  display (parentheses) is also refreshed.  onColorUpdate() skips the sci
+//  field that has focus so it doesn't fight the caret.
+function onSciInput(sciEl, numEl, sliderEl, ch, convEl) {
+    const irradiance = parseFloat(sciEl.value);
+    if (isNaN(irradiance) || irradiance < 0) return;
+    const pwm = calValueToPwm(ch, irradiance);
+    if (isNaN(pwm)) return;
+    const clampedPwm = clamp12(pwm);
+    sliderEl.value = clampedPwm;
+    numEl.value = clampedPwm;
+    // Refresh converted display + high-intensity warning + colour preview
+    const dispVal = pwmToDisplayValue(ch, clampedPwm);
+    const wl = channelDefs[ch]?.wavelength || 0;
+    const otherUnitLabel = displayUnit === "umol" ? UPCM_UNIT : UMOL_UNIT;
+    if (wl && !isNaN(dispVal)) {
+        const f = uwPerUmolFactor(wl);
+        const otherVal = displayUnit === "umol" ? dispVal * f : dispVal / f;
+        convEl.textContent = `(${otherVal.toFixed(2)} ${otherUnitLabel})`;
+    }
+    const r = clamp12(slider1.value), g = clamp12(slider2.value), b = clamp12(slider3.value);
+    num1.classList.toggle("high-intensity", r > 3000);
+    num2.classList.toggle("high-intensity", g > 3000);
+    num3.classList.toggle("high-intensity", b > 3000);
+    colorPrev.style.background = previewBackground(r, g, b);
+}
+// On blur: normalise the typed value to the exact PWM-derived irradiance
+function onSciBlur(sciEl, ch) {
+    const pwm = ch === "ch1" ? +slider1.value : ch === "ch2" ? +slider2.value : +slider3.value;
+    const clampedPwm = clamp12(pwm);
+    const dispVal = pwmToDisplayValue(ch, clampedPwm);
+    sciEl.value = isNaN(dispVal) ? 0 : dispVal.toFixed(2);
+}
+sci1.addEventListener("input", () => onSciInput(sci1, num1, slider1, "ch1", sciConverted1));
+sci2.addEventListener("input", () => onSciInput(sci2, num2, slider2, "ch2", sciConverted2));
+sci3.addEventListener("input", () => onSciInput(sci3, num3, slider3, "ch3", sciConverted3));
+sci1.addEventListener("blur", () => onSciBlur(sci1, "ch1"));
+sci2.addEventListener("blur", () => onSciBlur(sci2, "ch2"));
+sci3.addEventListener("blur", () => onSciBlur(sci3, "ch3"));
+
 onColorUpdate();
 
 // ── Pulse ON/OFF time fields (h/m/s/ms → total milliseconds) ────────────────
@@ -410,30 +545,42 @@ function hmsMsToDur(h, m, s, ms) {
 function renderSeqPhases() {
     const container = $("#seqPhases");
     container.innerHTML = "";
+    const unitLbl = getUnitLabel();
     seqPhases.forEach((p, i) => {
         const d = durToHmsMs(p.dur);
         const div = document.createElement("div");
         div.className = "seq-phase";
         const lbl1 = channelDefs.ch1.label, lbl2 = channelDefs.ch2.label, lbl3 = channelDefs.ch3.label;
-        // Build channel input cells only for enabled channels.
-        const cell = (chKey, lbl, val) => channelDefs[chKey].enabled
-            ? `<span class="lbl ch-${chKey.slice(-1)}">${esc(lbl)}</span><input type="number" min="0" max="4095" value="${val}" data-i="${i}" data-ch="${chKey}" class="seq-rgb">`
-            : "";
-        const irrad = (chKey, lbl, val) => channelDefs[chKey].enabled
-            ? `${pwmToDisplayString(chKey, val)} ${esc(lbl)}`
-            : null;
-        const irradParts = [irrad("ch1", lbl1, p.ch1), irrad("ch2", lbl2, p.ch2), irrad("ch3", lbl3, p.ch3)].filter(Boolean);
+
+        // Per-channel cell: channel label, then PWM and intensity inputs stacked vertically.
+        // Editing either one updates the other via the calibration data.
+        const cell = (chKey, lbl, val) => {
+            if (!channelDefs[chKey].enabled) return "";
+            const irradVal = pwmToDisplayValue(chKey, val);
+            const irradStr = isNaN(irradVal) ? "0.00" : irradVal.toFixed(2);
+            return `<div class="seq-ch-cell">
+                <span class="lbl ch-${chKey.slice(-1)}">${esc(lbl)}</span>
+                <div class="seq-ch-inputs">
+                    <input type="number" min="0" max="${intensityMax}" value="${val}" data-i="${i}" data-ch="${chKey}" data-field="pwm" class="seq-rgb" title="PWM (0–${intensityMax})">
+                    <span class="seq-field-label">PWM</span>
+                    <input type="number" min="0" step="0.01" value="${irradStr}" data-i="${i}" data-ch="${chKey}" data-field="irrad" class="seq-irrad-input" title="Irradiance (${unitLbl})">
+                    <span class="seq-field-label">${esc(unitLbl)}</span>
+                </div>
+            </div>`;
+        };
+
         const swCh1 = channelDefs.ch1.enabled ? p.ch1 : 0;
         const swCh2 = channelDefs.ch2.enabled ? p.ch2 : 0;
         const swCh3 = channelDefs.ch3.enabled ? p.ch3 : 0;
         div.innerHTML = `
             <span class="phase-num">${i + 1}</span>
-            ${cell("ch1", lbl1, p.ch1)}
-            ${cell("ch2", lbl2, p.ch2)}
-            ${cell("ch3", lbl3, p.ch3)}
+            <div class="seq-channels">
+                ${cell("ch1", lbl1, p.ch1)}
+                ${cell("ch2", lbl2, p.ch2)}
+                ${cell("ch3", lbl3, p.ch3)}
+            </div>
             <div class="phase-swatch" style="background:${previewBackground(swCh1, swCh2, swCh3)}"></div>
             <button class="btn-remove-phase" data-i="${i}">&times;</button>
-            <div class="seq-irrad">${irradParts.join(" &middot; ")}</div>
             <div class="seq-phase-dur">
                 <input type="number" min="0" max="999" value="${d.h}" data-i="${i}" data-u="h" class="dur-input"> h
                 <input type="number" min="0" max="59"  value="${d.m}" data-i="${i}" data-u="m" class="dur-input"> m
@@ -443,13 +590,62 @@ function renderSeqPhases() {
         `;
         container.appendChild(div);
     });
-    // RGB inputs
-    container.querySelectorAll(".seq-rgb").forEach((inp) =>
-        inp.addEventListener("change", () => {
-            seqPhases[+inp.dataset.i][inp.dataset.ch] = clamp12(inp.value);
-            renderSeqPhases();
+
+    // Helper: update the swatch for a phase row
+    function updateSwatch(row, idx) {
+        const sw = row.querySelector(".phase-swatch");
+        const s1 = seqPhases[idx].ch1 || 0, s2 = seqPhases[idx].ch2 || 0, s3 = seqPhases[idx].ch3 || 0;
+        sw.style.background = previewBackground(s1, s2, s3);
+    }
+
+    // PWM inputs → update intensity field + swatch (no full re-render)
+    container.querySelectorAll('.seq-rgb[data-field="pwm"]').forEach((inp) =>
+        inp.addEventListener("input", () => {
+            const idx = +inp.dataset.i;
+            const ch = inp.dataset.ch;
+            const pwm = clamp12(inp.value);
+            seqPhases[idx][ch] = pwm;
+            // Reflect the clamp back into the field so the shown value always
+            // matches what will actually be sent to the device.
+            if (inp.value !== "" && +inp.value !== pwm) inp.value = pwm;
+            const irradInp = inp.closest(".seq-ch-inputs").querySelector('.seq-irrad-input[data-field="irrad"]');
+            if (irradInp && document.activeElement !== irradInp) {
+                const v = pwmToDisplayValue(ch, pwm);
+                irradInp.value = isNaN(v) ? "0.00" : v.toFixed(2);
+            }
+            updateSwatch(inp.closest(".seq-phase"), idx);
         })
     );
+
+    // Intensity inputs → back-calculate PWM, update PWM field + swatch
+    container.querySelectorAll('.seq-irrad-input[data-field="irrad"]').forEach((inp) =>
+        inp.addEventListener("input", () => {
+            const idx = +inp.dataset.i;
+            const ch = inp.dataset.ch;
+            const irradiance = parseFloat(inp.value);
+            if (isNaN(irradiance) || irradiance < 0) return;
+            const pwm = calValueToPwm(ch, irradiance);
+            if (isNaN(pwm)) return;
+            const clampedPwm = clamp12(pwm);
+            seqPhases[idx][ch] = clampedPwm;
+            const pwmInp = inp.closest(".seq-ch-inputs").querySelector('.seq-rgb[data-field="pwm"]');
+            if (pwmInp && document.activeElement !== pwmInp) {
+                pwmInp.value = clampedPwm;
+            }
+            updateSwatch(inp.closest(".seq-phase"), idx);
+        })
+    );
+
+    // On blur: normalise the typed irrad value to the exact PWM-derived value
+    container.querySelectorAll('.seq-irrad-input[data-field="irrad"]').forEach((inp) =>
+        inp.addEventListener("blur", () => {
+            const idx = +inp.dataset.i;
+            const ch = inp.dataset.ch;
+            const v = pwmToDisplayValue(ch, seqPhases[idx][ch]);
+            inp.value = isNaN(v) ? "0.00" : v.toFixed(2);
+        })
+    );
+
     // Duration h/m/s/ms inputs
     container.querySelectorAll(".seq-phase-dur input").forEach((inp) =>
         inp.addEventListener("change", () => {
@@ -568,9 +764,9 @@ async function loadPreset(slot) {
 
     setIllumSide(p.illum || "top");
 
-    slider1.value = p.ch1 || 0;
-    slider2.value = p.ch2 || 0;
-    slider3.value = p.ch3 || 0;
+    slider1.value = clamp12(p.ch1 || 0);
+    slider2.value = clamp12(p.ch2 || 0);
+    slider3.value = clamp12(p.ch3 || 0);
     onColorUpdate();
 
     setTimeMsFields(p.pulseOnMs  || 10000, pulseOnH, pulseOnM, pulseOnS, pulseOnMsF);
@@ -578,9 +774,14 @@ async function loadPreset(slot) {
     onPulseChange();
 
     if (p.phases && p.phases.length) {
-        seqPhases = p.phases;
+        seqPhases = p.phases.map(ph => ({
+            ch1: clamp12(ph.ch1 || 0),
+            ch2: clamp12(ph.ch2 || 0),
+            ch3: clamp12(ph.ch3 || 0),
+            dur: ph.dur || 1000,
+        }));
     } else {
-        seqPhases = [{ ch1: PWM_MAX, ch2: 0, ch3: 0, dur: 1000 }];
+        seqPhases = [{ ch1: intensityMax, ch2: 0, ch3: 0, dur: 1000 }];
     }
     renderSeqPhases();
 
@@ -803,6 +1004,27 @@ function handleStatus(s) {
     }
 }
 
+// True when the user is currently typing inside the given container. The status
+// push arrives ~2×/s while a run is active; without this guard it would wipe
+// out whatever the user is in the middle of entering.
+function isEditingWithin(sel) {
+    const root = $(sel);
+    const el = document.activeElement;
+    if (!root || !el) return false;
+    return root.contains(el) && (el.tagName === "INPUT" || el.tagName === "SELECT");
+}
+
+// Shallow value comparison so we only rebuild the sequential DOM on a real
+// change (renderSeqPhases() replaces innerHTML and would drop focus).
+function seqPhasesEqual(a, b) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        if (a[i].ch1 !== b[i].ch1 || a[i].ch2 !== b[i].ch2 ||
+            a[i].ch3 !== b[i].ch3 || a[i].dur !== b[i].dur) return false;
+    }
+    return true;
+}
+
 // Sync Setup tab controls to match running program status
 function syncSetupFromStatus(s) {
     // Update mode buttons
@@ -815,49 +1037,59 @@ function syncSetupFromStatus(s) {
     }
 
     // Update color sliders (for constant/pulsed modes)
-    if (s.ch1 !== undefined && s.ch2 !== undefined && s.ch3 !== undefined) {
-        slider1.value = s.ch1;
-        slider2.value = s.ch2;
-        slider3.value = s.ch3;
+    if (s.ch1 !== undefined && s.ch2 !== undefined && s.ch3 !== undefined &&
+        !isEditingWithin("#colorCard")) {
+        slider1.value = clamp12(s.ch1);
+        slider2.value = clamp12(s.ch2);
+        slider3.value = clamp12(s.ch3);
         onColorUpdate();
     }
 
     // Update pulse timing fields
-    if (s.pulseOnMs !== undefined) {
-        setTimeMsFields(s.pulseOnMs, pulseOnH, pulseOnM, pulseOnS, pulseOnMsF);
+    if (!isEditingWithin("#pulseCard")) {
+        if (s.pulseOnMs !== undefined) {
+            setTimeMsFields(s.pulseOnMs, pulseOnH, pulseOnM, pulseOnS, pulseOnMsF);
+        }
+        if (s.pulseOffMs !== undefined) {
+            setTimeMsFields(s.pulseOffMs, pulseOffH, pulseOffM, pulseOffS, pulseOffMsF);
+        }
+        onPulseChange();
     }
-    if (s.pulseOffMs !== undefined) {
-        setTimeMsFields(s.pulseOffMs, pulseOffH, pulseOffM, pulseOffS, pulseOffMsF);
-    }
-    onPulseChange();
 
-    // Update sequential phases
-    if (s.phases && s.phases.length > 0) {
-        seqPhases = s.phases.map(p => ({
-            ch1: p.ch1 || 0,
-            ch2: p.ch2 || 0,
-            ch3: p.ch3 || 0,
+    // Update sequential phases — ONLY when the device actually reports them.
+    // buildStatusJson() omits `phases` entirely outside sequential mode, so
+    // treating a missing field as "no phases" would wipe the user's program
+    // the moment a constant/pulsed run starts. Re-render only on a real change
+    // and never while the user is typing in one of the fields.
+    if (Array.isArray(s.phases) && s.phases.length > 0) {
+        const incoming = s.phases.map(p => ({
+            ch1: clamp12(p.ch1 || 0),
+            ch2: clamp12(p.ch2 || 0),
+            ch3: clamp12(p.ch3 || 0),
             dur: p.dur || 1000
         }));
-    } else {
-        seqPhases = [{ ch1: PWM_MAX, ch2: 0, ch3: 0, dur: 1000 }];
+        if (!seqPhasesEqual(incoming, seqPhases) && !isEditingWithin("#seqPhases")) {
+            seqPhases = incoming;
+            renderSeqPhases();
+        }
     }
-    renderSeqPhases();
 
     // Update duration
-    if (s.duration > 0) {
-        chkTimed.checked = true;
-        durInputs.classList.remove("hidden");
-        durH.value = Math.floor(s.duration / 3600);
-        durM.value = Math.floor((s.duration % 3600) / 60);
-        durS.value = s.duration % 60;
-    } else {
-        chkTimed.checked = false;
-        durInputs.classList.add("hidden");
+    if (!isEditingWithin("#durationInputs")) {
+        if (s.duration > 0) {
+            chkTimed.checked = true;
+            durInputs.classList.remove("hidden");
+            durH.value = Math.floor(s.duration / 3600);
+            durM.value = Math.floor((s.duration % 3600) / 60);
+            durS.value = s.duration % 60;
+        } else {
+            chkTimed.checked = false;
+            durInputs.classList.add("hidden");
+        }
     }
 
     // Update lead time
-    setLeadFields(s.leadTime || 0);
+    if (!isEditingWithin("#leadInputs")) setLeadFields(s.leadTime || 0);
 
     // Keep the header name in sync (e.g. if changed from another client).
     if (s.deviceName) applyDeviceName(s.deviceName);
@@ -956,21 +1188,35 @@ function renderCalChannel(ch) {
             const idx = +inp.dataset.i, field = +inp.dataset.f;
             const val = +inp.value;
             getCurrentCal(calEditSide).points[inp.dataset.ch][idx][field] = val;
+            getCurrentCal(calEditSide).isDummy = false;
             calDirty = true;
             drawCalGraph(inp.dataset.ch, `#calGraph${inp.dataset.ch.slice(2)}`);
             onColorUpdate();
+            updateCalWarning();
         })
     );
     // bind remove
     container.querySelectorAll(".cal-remove").forEach((btn) =>
         btn.addEventListener("click", () => {
             getCurrentCal(calEditSide).points[btn.dataset.ch].splice(+btn.dataset.i, 1);
+            getCurrentCal(calEditSide).isDummy = false;
             calDirty = true;
             renderCalChannel(btn.dataset.ch);
             drawCalGraph(btn.dataset.ch, `#calGraph${btn.dataset.ch.slice(2)}`);
             onColorUpdate();
+            updateCalWarning();
         })
     );
+
+    // Nudge the user to anchor the curve at the origin. Without a PWM=0 point
+    // every value below the lowest measurement is extrapolated, which can even
+    // produce negative irradiance readings.
+    if (!pts.some(p => p[0] === 0)) {
+        const note = document.createElement("div");
+        note.className = "cal-origin-note";
+        note.innerHTML = `&#9888; No <strong>0, 0</strong> point &mdash; add one so the curve starts at the origin.`;
+        container.appendChild(note);
+    }
 }
 
 function renderAllCal() {
@@ -1145,9 +1391,11 @@ function drawAllCalGraphs() {
         if (pts.length >= 16) { toast("Max 16 points"); return; }
         const lastPwm = pts.length > 0 ? pts[pts.length - 1][0] : 0;
         pts.push([Math.min(PWM_MAX, lastPwm + 256), 0]);
+        getCurrentCal(calEditSide).isDummy = false;
         calDirty = true;
         renderCalChannel(key);
         drawCalGraph(key, `#calGraph${n}`);
+        updateCalWarning();
     });
 });
 
@@ -1179,6 +1427,7 @@ function setIllumSide(side, opts = {}) {
     // Every active-side irradiance display must refresh.
     if (typeof onColorUpdate === "function") onColorUpdate();
     if (typeof renderSeqPhases === "function") renderSeqPhases();
+    window.dispatchEvent(new Event("helios:calDisplayChanged"));
     if (!opts.silent) toast(`Active illumination: ${side === "top" ? "Top" : "Bottom"}`);
 }
 function setCalEditSide(side) {
@@ -1187,6 +1436,7 @@ function setCalEditSide(side) {
     $$("#calSideToggle .calside-btn").forEach(b => b.classList.toggle("selected", b.dataset.calside === side));
     reflectCalModeRadio();
     renderAllCal();
+    updateCalWarning();
 }
 $$("#illumToggle .illum-btn").forEach(b =>
     b.addEventListener("click", () => setIllumSide(b.dataset.illum))
@@ -1259,6 +1509,7 @@ $("#calImportFile").addEventListener("change", async (e) => {
         calDirty = true;
         renderAllCal();
         onColorUpdate();
+        updateCalWarning();
         toast("Calibration imported (remember to save)");
     } catch (err) {
         toast("Failed to import calibration: " + err.message);
@@ -1298,12 +1549,12 @@ function applyCalSideData(side, s) {
 
     if (s.umol) {
         if (s.umol.mode === "power" || s.umol.mode === "linear") calStore[side].umol.mode = s.umol.mode;
-        if (s.umol.points) copyChannelPoints(s.umol.points, calStore[side].umol.points);
+        if (s.umol.points) { copyChannelPoints(s.umol.points, calStore[side].umol.points); calStore[side].umol.isDummy = s.umol.isDummy === true; }
         if (s.umol.coeffs) calStore[side].umol.coeffs = s.umol.coeffs;
     }
     if (s.uwcm2) {
         if (s.uwcm2.mode === "power" || s.uwcm2.mode === "linear") calStore[side].uwcm2.mode = s.uwcm2.mode;
-        if (s.uwcm2.points) copyChannelPoints(s.uwcm2.points, calStore[side].uwcm2.points);
+        if (s.uwcm2.points) { copyChannelPoints(s.uwcm2.points, calStore[side].uwcm2.points); calStore[side].uwcm2.isDummy = s.uwcm2.isDummy === true; }
         if (s.uwcm2.coeffs) calStore[side].uwcm2.coeffs = s.uwcm2.coeffs;
     }
 }
@@ -1431,6 +1682,14 @@ loadCalibration();
         }
     });
 
+    // The irradiance read-outs are derived from the calibration data for the
+    // active side + display unit, so they go stale when either changes.
+    window.addEventListener("helios:calDisplayChanged", () => {
+        sliders.forEach((s, i) => {
+            if (s && sciVals[i]) sciVals[i].textContent = " " + pwmToDisplayString(`ch${i + 1}`, +s.value);
+        });
+    });
+
     // When the user navigates away from the Calibration tab, switch live off
     // automatically — leaving LEDs on after the user moves on is surprising.
     $$(".tab").forEach(t => t.addEventListener("click", () => {
@@ -1519,6 +1778,9 @@ function drawTempChart() {
     // Time range display
     const rangeEl = $("#tempTimeRange");
     if (rangeEl) {
+        const tMin = Math.min(...times);
+        const tMax = Math.max(...times);
+        const spanMin = tMax - tMin;
         rangeEl.textContent = spanMin > 0 ? `Minutes ${tMin}-${tMax} (${tempLog.length} points)` : `Showing ${tempLog.length} points`;
     }
 }
@@ -1824,9 +2086,14 @@ $$('input[name="displayUnit"]').forEach(radio => {
         displayUnit = radio.value;
         localStorage.setItem("helios_display_unit", displayUnit);
         onColorUpdate();
+        // Sequential rows embed the unit label and irradiance values, so they
+        // must be rebuilt for the new unit's calibration dataset.
+        renderSeqPhases();
         // Re-render calibration tab to show the dataset for the new display unit
         reflectCalModeRadio();
         renderAllCal();
+        updateCalWarning();
+        window.dispatchEvent(new Event("helios:calDisplayChanged"));
         toast(`Display unit: ${getUnitLabel()}`);
     });
 });
@@ -2101,9 +2368,14 @@ applyIntensityMax();
     function stepInput(input, delta) {
         const min = +input.min || 0;
         const max = +input.max || PWM_MAX;
-        let v = parseInt(input.value, 10);
+        let v = parseFloat(input.value);
         if (isNaN(v)) v = 0;
         v = Math.min(max, Math.max(min, v + delta));
+        // Round to avoid floating-point drift for decimal steps
+        if (delta % 1 !== 0) {
+            const decimals = (delta.toString().split('.')[1] || '').length;
+            v = parseFloat(v.toFixed(decimals));
+        }
         input.value = v;
         input.dispatchEvent(new Event("input", { bubbles: true }));
         input.dispatchEvent(new Event("change", { bubbles: true }));

@@ -1,4 +1,6 @@
-Helios demo server implemented with GLM-5.2.
+Helios demo server implemented with GLM-5.2, deployed via GitHub Pages:
+
+[https://beyerh.github.io/helios/](https://beyerh.github.io/helios/)
 
 ## Run locally
 

@@ -16,23 +16,29 @@
     const MAX_PRESETS = 20;
 
     function defaultCal() {
-        function ds() {
+        function ds(side, unit) {
+            const scales = {
+                "top.umol":    { ch1: 150, ch2: 200, ch3: 80 },
+                "top.uwcm2":   { ch1: 3300, ch2: 4400, ch3: 1760 },
+                "bottom.umol": { ch1: 120, ch2: 170, ch3: 60 },
+                "bottom.uwcm2":{ ch1: 2640, ch2: 3740, ch3: 1320 },
+            };
+            const key = side + "." + unit;
+            const s = scales[key] || scales["top.umol"];
+            const ramp = (max) => [[0, 0], [1024, Math.round(max * 0.25)], [2048, Math.round(max * 0.5)], [3072, Math.round(max * 0.75)], [4095, max]];
             return {
                 mode: 'linear',
-                points: {
-                    ch1: [[0, 0], [1024, 35], [2048, 72], [3072, 110], [4095, 150]],
-                    ch2: [[0, 0], [1024, 48], [2048, 98], [3072, 148], [4095, 200]],
-                    ch3: [[0, 0], [1024, 18], [2048, 38], [3072, 58], [4095, 80]],
-                },
+                points: { ch1: ramp(s.ch1), ch2: ramp(s.ch2), ch3: ramp(s.ch3) },
                 coeffs: { ch1: null, ch2: null, ch3: null },
+                isDummy: true,
             };
         }
         return {
             version: 3,
             active: 'top',
             sides: {
-                top: { umol: ds(), uwcm2: ds() },
-                bottom: { umol: ds(), uwcm2: ds() },
+                top:    { umol: ds("top", "umol"),    uwcm2: ds("top", "uwcm2") },
+                bottom: { umol: ds("bottom", "umol"), uwcm2: ds("bottom", "uwcm2") },
             },
         };
     }
@@ -51,7 +57,18 @@
             if (raw) {
                 const d = JSON.parse(raw);
                 d.presets = d.presets || {};
-                d.calibration = d.calibration || defaultCal();
+                // Migrate: if stored calibration lacks isDummy flags, it's from
+                // an older version with identical dummy data for all 4 combos.
+                // Replace with new differentiated defaults.
+                if (d.calibration) {
+                    const t = d.calibration.sides && d.calibration.sides.top;
+                    const hasDummyFlag = t && t.umol && typeof t.umol.isDummy === 'boolean';
+                    if (!hasDummyFlag) {
+                        d.calibration = defaultCal();
+                    }
+                } else {
+                    d.calibration = defaultCal();
+                }
                 d.settings = d.settings || defaultSettings();
                 d.tempOffset = d.tempOffset || 0;
                 d.runCounter = d.runCounter || 0;
@@ -534,9 +551,10 @@
         state.running = true;
         state.expired = false;
         state.mode = body.mode || 'constant';
-        state.ch1 = body.ch1 || 0;
-        state.ch2 = body.ch2 || 0;
-        state.ch3 = body.ch3 || 0;
+        // Clamp to the 12-bit PWM range, matching the firmware's PulseEngine.
+        state.ch1 = Math.min(4095, body.ch1 || 0);
+        state.ch2 = Math.min(4095, body.ch2 || 0);
+        state.ch3 = Math.min(4095, body.ch3 || 0);
         state.currentCh1 = state.ch1;
         state.currentCh2 = state.ch2;
         state.currentCh3 = state.ch3;
@@ -597,6 +615,11 @@
     }
 
     function handleLive(body) {
+        // Live preview is not logged. If a recorded run is active, end it
+        // first so the run log doesn't keep collecting samples that no longer
+        // match the LED output.
+        if (activeRun) handleStop();
+
         state.inLead = false;
         state.leadRemainingMs = 0;
         if (!body.on) {
@@ -609,9 +632,9 @@
             state.running = true;
             state.expired = false;
             state.mode = 'constant';
-            state.ch1 = body.ch1 || 0;
-            state.ch2 = body.ch2 || 0;
-            state.ch3 = body.ch3 || 0;
+            state.ch1 = Math.min(4095, body.ch1 || 0);
+            state.ch2 = Math.min(4095, body.ch2 || 0);
+            state.ch3 = Math.min(4095, body.ch3 || 0);
             state.currentCh1 = state.ch1;
             state.currentCh2 = state.ch2;
             state.currentCh3 = state.ch3;
@@ -684,7 +707,8 @@
     // ── Run logs ──────────────────────────────────────────────────────────────
     function startRunLog(body) {
         data.runCounter = (data.runCounter || 0) + 1;
-        var num = String(data.runCounter).padStart(4, '0');
+        // 8-digit zero-padding to match the firmware's run_%08u.csv naming.
+        var num = String(data.runCounter).padStart(8, '0');
         var name = 'run_' + num + '.csv';
         var lines = [
             '# Helios Run Log',

@@ -200,7 +200,7 @@ header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: .5px; }
 .slider.ch2::-webkit-slider-thumb { background: var(--ch2); }
 .slider.ch3::-webkit-slider-thumb  { background: var(--ch3); }
 
-.slider-vals { display: flex; gap: .4rem; width: 100%; padding-left: 84px; font-size: .78rem; }
+.slider-vals { display: flex; flex-direction: column; gap: .15rem; width: 100%; padding-left: 84px; font-size: .78rem; }
 .pwm-val  { color: var(--text); font-weight: 600; min-width: 28px; }
 .sci-val  { color: var(--text-dim); }
 
@@ -245,6 +245,13 @@ header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: .5px; }
     color: var(--text);
     font-size: .8rem;
     text-align: center;
+}
+/* Override for stacked channel inputs in sequential phases */
+.seq-phase .seq-ch-inputs input[type="number"] {
+    width: 78px;
+    padding: .2rem .3rem;
+    text-align: right;
+    font-size: .78rem;
 }
 .seq-phase .phase-swatch {
     width: 22px; height: 22px;
@@ -422,16 +429,19 @@ input[type="number"]::-webkit-outer-spin-button {
     outline: none;
 }
 
-/* ── Scientific irradiance input (display only) ───────────────────── */
+/* ── Scientific irradiance input (editable) ─────────────────────── */
 .sci-input {
-    width: 120px; padding: .3rem .4rem; text-align: right;
-    border: 1px solid transparent; border-radius: 4px;
-    background: transparent; color: var(--text); font-size: .82rem;
+    width: 60px; padding: .3rem .4rem; text-align: right;
+    border: 1px solid var(--border); border-radius: 4px;
+    background: var(--card); color: var(--text); font-size: .82rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
-    cursor: default;
+    cursor: text;
 }
-.sci-input:focus { outline: none; }
+.sci-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
 .sci-input::-webkit-outer-spin-button,
 .sci-input::-webkit-inner-spin-button {
     -webkit-appearance: none;
@@ -442,23 +452,41 @@ input[type="number"]::-webkit-outer-spin-button {
     appearance: textfield;
 }
 
-/* ── Scientific value group (input + unit + converted) ───────────────── */
-.sci-group {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
+/* ── Dual stepper (PWM + intensity side by side) ──────────────────── */
+.dual-stepper {
+    display: inline-flex;
     align-items: center;
-    gap: .3rem;
+    gap: 2px;
+    flex-shrink: 0;
 }
-.sci-input { order: 1; }
-.sci-unit  { order: 2; }
+.dual-labels {
+    display: flex;
+    gap: 2px;
+    margin-top: .1rem;
+    padding-left: 28px; /* align with first input (after stepper btn width + gap) */
+}
+.dual-label-pwm {
+    width: 60px;
+    text-align: center;
+    font-size: .68rem;
+    color: var(--text-dim);
+}
+.dual-label-sci {
+    width: 60px;
+    text-align: center;
+    font-size: .68rem;
+    color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── Converted value display (parentheses, inline) ─────────────────── */
 .sci-converted {
-    order: 3;
-    width: 100%;
-    text-align: right;
     font-size: .7rem; color: var(--text-dim);
     font-style: italic;
     white-space: nowrap;
+    margin-left: .4rem;
 }
 
 /* ── High intensity warning (PWM > 3000) ─────────────────────────────── */
@@ -627,8 +655,83 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 .temp-actions { margin-top: .5rem; }
 
-/* ── Seq phase irradiance readout ─────────────────────────────────────── */
+/* ── Seq phase irradiance readout (legacy, unused) ─────────────────── */
 .seq-irrad { font-size: .68rem; color: var(--text-dim); width: 100%; padding-left: 22px; margin-top: .1rem; }
+
+/* ── Sequential phase: PWM + intensity stacked per channel ──────────── */
+.seq-channels {
+    display: flex;
+    gap: .4rem;
+    flex: 1;
+    flex-wrap: nowrap;
+}
+.seq-ch-cell {
+    display: flex;
+    flex-direction: column;
+    gap: .1rem;
+    min-width: 78px;
+}
+.seq-ch-cell .lbl {
+    font-size: .72rem;
+    font-weight: 600;
+    margin-bottom: .1rem;
+}
+.seq-ch-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: .2rem;
+}
+.seq-field-label {
+    display: block;
+    font-size: .65rem;
+    color: var(--text-dim);
+    white-space: nowrap;
+    text-align: center;
+    width: 78px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.seq-ch-inputs input {
+    width: 78px;
+    padding: .2rem .3rem;
+    text-align: right;
+    font-size: .78rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--card);
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+}
+.seq-ch-inputs input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+.seq-irrad-input {
+    font-weight: 400;
+}
+
+/* ── Uncalibrated warning ──────────────────────────────────────────────── */
+.cal-warning {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .5rem .8rem;
+    margin-bottom: .6rem;
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 6px;
+    font-size: .78rem;
+    color: #856404;
+}
+.cal-warning-icon {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+.cal-origin-note {
+    margin-top: .35rem;
+    font-size: .7rem;
+    color: #d0a020;
+}
 
 /* ── Utility ───────────────────────────────────────────────────────────── */
 .hidden { display: none !important; }
@@ -636,6 +739,6 @@ input[type="number"]::-webkit-outer-spin-button {
 /* ── Responsive ────────────────────────────────────────────────────────── */
 @media (max-width: 380px) {
     .slider-vals { padding-left: 0; }
-    .seq-phase input[type="number"] { width: 62px; }
+    .seq-phase input[type="number"]:not(.seq-ch-inputs input) { width: 62px; }
     .zone-grid { max-width: 280px; }
 }

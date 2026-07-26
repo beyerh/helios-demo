@@ -59,21 +59,22 @@
     <!-- Channel intensities (3 PWM outputs, 12-bit resolution 0–4095) -->
     <div class="card" id="colorCard">
         <h2>Channel Intensities</h2>
-        <p class="hint">Drag the slider for coarse adjustment or type the exact PWM value (0–4095). The irradiance read-out (right-hand field) is derived from the current calibration and display unit chosen in Settings → Display Unit.</p>
+        <p class="hint">Enter PWM or irradiance — the other field updates from calibration data. Value in parentheses is the converted unit (display-only).</p>
 
         <div class="slider-group" id="sliderGroup1">
             <span class="ch-label ch-1" id="label1">450 nm</span>
             <input type="range" id="slider1" min="0" max="4095" value="0" class="slider ch1">
             <div class="slider-vals">
-                <div class="pwm-stepper">
-                    <button type="button" class="stepper-btn" data-step="-1" data-target="num1" aria-label="Decrease" tabindex="-1">&minus;</button>
+                <div class="dual-stepper">
+                    <button type="button" class="stepper-btn" data-step="-1" data-target="num1" aria-label="Decrease PWM" tabindex="-1">&minus;</button>
                     <input type="number" id="num1" min="0" max="4095" value="0" class="pwm-num-input" title="Raw PWM (0–4095)">
-                    <button type="button" class="stepper-btn" data-step="1" data-target="num1" aria-label="Increase" tabindex="-1">+</button>
-                </div>
-                <div class="sci-group">
-                    <input type="number" id="sci1" min="0" step="0.01" value="0" class="sci-input" title="Irradiance (display only)" readonly>
-                    <span class="sci-unit" id="sciUnit1">µmol m⁻² s⁻¹</span>
+                    <input type="number" id="sci1" min="0" step="0.01" value="0" class="sci-input" title="Irradiance (editable — updates PWM)">
+                    <button type="button" class="stepper-btn" data-step="1" data-target="num1" aria-label="Increase PWM" tabindex="-1">+</button>
                     <span class="sci-converted" id="sciConverted1"></span>
+                </div>
+                <div class="dual-labels">
+                    <span class="dual-label-pwm">PWM</span>
+                    <span class="dual-label-sci" id="sciLabel1">µmol m⁻² s⁻¹</span>
                 </div>
             </div>
         </div>
@@ -82,15 +83,16 @@
             <span class="ch-label ch-2" id="label2">660 nm</span>
             <input type="range" id="slider2" min="0" max="4095" value="0" class="slider ch2">
             <div class="slider-vals">
-                <div class="pwm-stepper">
-                    <button type="button" class="stepper-btn" data-step="-1" data-target="num2" aria-label="Decrease" tabindex="-1">&minus;</button>
+                <div class="dual-stepper">
+                    <button type="button" class="stepper-btn" data-step="-1" data-target="num2" aria-label="Decrease PWM" tabindex="-1">&minus;</button>
                     <input type="number" id="num2" min="0" max="4095" value="0" class="pwm-num-input" title="Raw PWM (0–4095)">
-                    <button type="button" class="stepper-btn" data-step="1" data-target="num2" aria-label="Increase" tabindex="-1">+</button>
-                </div>
-                <div class="sci-group">
-                    <input type="number" id="sci2" min="0" step="0.01" value="0" class="sci-input" title="Irradiance (display only)" readonly>
-                    <span class="sci-unit" id="sciUnit2">µmol m⁻² s⁻¹</span>
+                    <input type="number" id="sci2" min="0" step="0.01" value="0" class="sci-input" title="Irradiance (editable — updates PWM)">
+                    <button type="button" class="stepper-btn" data-step="1" data-target="num2" aria-label="Increase PWM" tabindex="-1">+</button>
                     <span class="sci-converted" id="sciConverted2"></span>
+                </div>
+                <div class="dual-labels">
+                    <span class="dual-label-pwm">PWM</span>
+                    <span class="dual-label-sci" id="sciLabel2">µmol m⁻² s⁻¹</span>
                 </div>
             </div>
         </div>
@@ -99,15 +101,16 @@
             <span class="ch-label ch-3" id="label3">730 nm</span>
             <input type="range" id="slider3" min="0" max="4095" value="0" class="slider ch3">
             <div class="slider-vals">
-                <div class="pwm-stepper">
-                    <button type="button" class="stepper-btn" data-step="-1" data-target="num3" aria-label="Decrease" tabindex="-1">&minus;</button>
+                <div class="dual-stepper">
+                    <button type="button" class="stepper-btn" data-step="-1" data-target="num3" aria-label="Decrease PWM" tabindex="-1">&minus;</button>
                     <input type="number" id="num3" min="0" max="4095" value="0" class="pwm-num-input" title="Raw PWM (0–4095)">
-                    <button type="button" class="stepper-btn" data-step="1" data-target="num3" aria-label="Increase" tabindex="-1">+</button>
-                </div>
-                <div class="sci-group">
-                    <input type="number" id="sci3" min="0" step="0.01" value="0" class="sci-input" title="Irradiance (display only)" readonly>
-                    <span class="sci-unit" id="sciUnit3">µmol m⁻² s⁻¹</span>
+                    <input type="number" id="sci3" min="0" step="0.01" value="0" class="sci-input" title="Irradiance (editable — updates PWM)">
+                    <button type="button" class="stepper-btn" data-step="1" data-target="num3" aria-label="Increase PWM" tabindex="-1">+</button>
                     <span class="sci-converted" id="sciConverted3"></span>
+                </div>
+                <div class="dual-labels">
+                    <span class="dual-label-pwm">PWM</span>
+                    <span class="dual-label-sci" id="sciLabel3">µmol m⁻² s⁻¹</span>
                 </div>
             </div>
         </div>
@@ -146,8 +149,7 @@
     <!-- Sequential / Program editor (shown only in sequential mode) -->
     <div class="card hidden" id="seqCard">
         <h2>Program Steps</h2>
-        <p class="hint">Each step's three channel values (0–4095) set the per-channel intensity.
-            Set all three to 0 for a dark interval. Duration supports hours down to milliseconds.</p>
+        <p class="hint">Set per-channel PWM (0–4095) for each step. All channels at 0 = dark interval. Duration supports h/m/s/ms.</p>
         <div id="seqPhases"></div>
         <button class="btn btn-small" id="btnAddPhase">+ Add Step</button>
         <p class="hint">The program loops indefinitely once started.</p>
@@ -203,7 +205,7 @@
             <div class="temp-time-range" id="tempTimeRange"></div>
         </div>
         <div class="temp-actions">
-            <p class="hint" style="margin-top:.3rem">Live temperature updates every 2 s. The chart above shows the last ~12 h (RAM only, cleared on restart). For each experiment a full-length CSV is saved persistently to the device under <em>Run Logs</em> (Settings tab) — this survives power loss and covers the entire run.</p>
+            <p class="hint" style="margin-top:.3rem">Chart shows last ~12 h (RAM only). Full CSV saved per experiment under Run Logs (Settings tab).</p>
         </div>
     </div>
 
@@ -232,7 +234,7 @@
 
     <div class="card">
         <h2>Auto-Start on Power-On</h2>
-        <p class="hint">Automatically start a preset when unit is powered. Useful for multi-unit experiments.</p>
+        <p class="hint">Start a preset automatically on power-on. Useful for multi-unit experiments.</p>
         <label class="checkbox-label" style="display:flex; align-items:center; gap:.5rem; margin-bottom:.8rem;">
             <input type="checkbox" id="chkAutoStart">
             <span>Enable auto-start on power-on</span>
@@ -272,7 +274,7 @@
     <!-- Device Name -->
     <div class="card locked-setting" id="deviceNameCard">
         <h2>Device Name</h2>
-        <p class="hint">Name shown in the header. Give each unit a unique name (e.g. Helios001) to see at a glance which device you are connected to. Applies immediately.</p>
+        <p class="hint">Name shown in the header. Give each unit a unique name (e.g. Helios 1).</p>
         <div class="slider-group">
             <label>
                 Display Name
@@ -289,6 +291,7 @@
     <div class="card locked-setting" id="wifiSettingsCard">
         <h2>WiFi Access Point</h2>
         <p class="hint">Change network name and password. Restart required after saving.</p>
+        <p class="hint">Plain text input — this is a single-user lab tool on an isolated AP.</p>
         <div class="slider-group">
             <label>
                 Network Name (SSID)
@@ -296,9 +299,6 @@
             </label>
             <label>
                 Password (min 8 characters)
-                <!-- Plain text input so the AP credentials stay visible to whoever
-                     is configuring the device; this is a single-user lab tool on
-                     an isolated AP, not a multi-tenant system. -->
                 <input type="text" id="wifiPassword" minlength="8" maxlength="63" placeholder="Helios001">
             </label>
         </div>
@@ -312,7 +312,7 @@
     <!-- Display Unit -->
     <div class="card locked-setting" id="displayUnitCard">
         <h2>Display Unit</h2>
-        <p class="hint">Choose the irradiance unit shown throughout the UI and used for calibration. When you switch units, you will see a different calibration dataset (top and bottom are stored independently per unit). If no calibration exists for the selected unit, you will need to calibrate.</p>
+        <p class="hint">Irradiance unit shown throughout the UI. Each unit (µmol m⁻² s⁻¹ / µW cm⁻²) has its own calibration per side.</p>
         <div class="unit-selector">
             <label>
                 <input type="radio" name="displayUnit" value="umol" checked>
@@ -331,7 +331,7 @@
     <!-- Channel Definitions (display label + colour + wavelength for each PWM channel) -->
     <div class="card locked-setting" id="channelDefsCard">
         <h2>Channel Definitions</h2>
-        <p class="hint">Set label, colour, and peak wavelength for each LED channel. Wavelength drives the µmol ↔ μW/cm² conversion. Uncheck a channel to hide it throughout the UI. Stored locally in this browser.</p>
+        <p class="hint">Label, colour, and peak wavelength per LED channel. Wavelength drives µmol ↔ μW/cm² conversion. Uncheck to hide a channel. Stored in this browser.</p>
         <div class="chdef-row">
             <label class="chdef-enable"><input type="checkbox" id="ch1Enabled" checked> <span class="chdef-id">Ch1</span></label>
             <input type="text" id="ch1Label" maxlength="16" class="text-input chdef-label" placeholder="450 nm">
@@ -362,7 +362,7 @@
     <!-- Intensity Range -->
     <div class="card locked-setting" id="intensityRangeCard">
         <h2>Intensity Range</h2>
-        <p class="hint">Upper limit for the intensity sliders on the Setup and Calibration tabs. Default is 2000 (about half of the full 12-bit range). Lower values make the sliders easier to adjust for low-light experiments.</p>
+        <p class="hint">Upper limit for intensity sliders. Default 2000 (half of 12-bit range). Lower values give finer control for low-light experiments.</p>
         <div class="chdef-row">
             <label>Max PWM (1–4095):</label>
             <input type="number" id="intensityMaxInput" min="1" max="4095" value="2000" class="chdef-wl" style="width: 5rem; text-align: right;">
@@ -375,7 +375,7 @@
     <!-- Temperature Calibration -->
     <div class="card locked-setting" id="tempCalCard">
         <h2>Temperature Calibration</h2>
-        <p class="hint">DS18B20 sensors are factory-calibrated to ±0.5 °C. A single additive offset is enough to align this device to a reference thermometer placed in the same air pocket. The offset is applied to every temperature shown in the UI and saved to run logs (and recorded in the metadata block of each CSV).</p>
+        <p class="hint">DS18B20 sensors are factory-calibrated to ±0.5 °C. Enter an additive offset to align with a reference thermometer. Applied to all displayed temperatures and saved to run logs.</p>
         <div class="cal-row">
             <span class="cal-row-lbl">Raw sensor</span>
             <span class="cal-row-val" id="tcRaw">-- °C</span>
@@ -396,13 +396,12 @@
             <span style="margin-left:.3rem;">°C</span>
             <button class="btn btn-tiny" id="btnComputeTempOffset">Compute &amp; Save</button>
         </div>
-        <p class="hint" style="margin-top:.3rem">Enter the temperature shown by a trusted thermometer in the same air space, then click <strong>Compute &amp; Save</strong>. The offset is set to <em>reference − raw</em>, clamped to ±5 °C. Use the offset field directly if you already know the correction.</p>
+        <p class="hint" style="margin-top:.3rem">Enter a reference thermometer reading and click <strong>Compute &amp; Save</strong>. Offset = reference − raw, clamped to ±5 °C.</p>
     </div>
 
     <!-- Temperature & Fan -->
     <div class="card locked-setting" id="tempFanSettingsCard">
         <h2>Temperature &amp; Fan</h2>
-        <p class="hint">DS18B20 sensor on GPIO 4. Fan driven via the 4th MOSFET channel (GPIO 27); PWM-switches the fan's 12 V supply, so use a plain 2- or 3-pin 12 V fan.</p>
         <div class="fan-controls">
             <div class="slider-group" id="fanSpeedGroup">
                 <label>
@@ -415,14 +414,14 @@
                 </label>
             </div>
             <button class="btn btn-small" id="btnApplyFan">Apply Fan Settings</button>
-            <p class="hint" style="margin-top:.3rem">Set the fan speed and click <strong>Apply Fan Settings</strong>. 0&#8239;% turns the fan off. Changing it during an experiment may affect thermal conditions, so a confirmation is required.</p>
+            <p class="hint" style="margin-top:.3rem">0&#8239;% = fan off. Changes during an experiment require confirmation.</p>
         </div>
     </div>
 
     <!-- Run Logs (persistent per-experiment temperature traces) -->
     <div class="card" id="runLogsCard">
         <h2>Run Logs</h2>
-        <p class="hint">Each experiment (manual Start or autostart) writes a CSV file to flash with metadata header (channel intensities, mode, durations, preset name) and the per-minute temperature trace. Files are numbered sequentially (Run #1, #2, …) and survive power-cycles. Up to 30 runs are kept; the oldest is auto-deleted when full.</p>
+        <p class="hint">Each experiment writes a CSV with metadata and per-minute temperature to flash. Up to 30 runs kept; oldest auto-deleted when full.</p>
         <table class="runlogs-table">
             <thead>
                 <tr><th>Run</th><th>Size</th><th>Actions</th></tr>
@@ -438,9 +437,6 @@
     </div>
 
     <!-- Safety lock note for fan -->
-    <div class="hint" style="padding: 0 1.1rem .3rem; color: var(--text-dim); font-size:.72rem;">
-        Tip: Fan changes require explicit confirmation to prevent accidental modifications during experiments.
-    </div>
 
     <div class="card">
         <h2>About</h2>
@@ -449,7 +445,7 @@
             ESP32 + tri-channel analog PWM (12-bit) cell-culture illuminator<br>
             Default LED set: 450 / 660 / 730 nm tri-spectrum strip<br>
             WiFi AP: Helios001 / Helios001<br>
-            URL: <code>http://helios.local/</code> &nbsp;or&nbsp; <code>http://192.168.4.1/</code>
+            URL: <code>http://192.168.4.1/</code> &nbsp;or&nbsp; <code>http://helios.local/</code>
         </p>
     </div>
 </section>
@@ -461,7 +457,7 @@
     <!-- Live preview: drives LEDs in constant mode without recording a run -->
     <div class="card" id="calLiveCard">
         <h2>Live Preview</h2>
-        <p class="hint">Drive the LEDs directly while you measure with the spectroradiometer &mdash; no Start/Stop, no run log. Turn this <em>off</em> before starting a real experiment.</p>
+        <p class="hint">Drive LEDs directly for spectroradiometer measurements — no run log. Turn off before starting a real experiment.</p>
         <label class="checkbox-label" style="display:flex; align-items:center; gap:.5rem; margin:.4rem 0 .8rem;">
             <input type="checkbox" id="chkLiveMode">
             <span><strong>Live mode</strong> (LEDs follow sliders in real time)</span>
@@ -503,15 +499,11 @@
             <span>Editing enabled.</span>
             <button class="btn btn-tiny" id="btnLockCal">Lock</button>
         </div>
-        <p class="hint">
-            Enter measurement points per channel (min. 2). PWM values are in the
-            12-bit range 0–4095. Choose the fitting method:
-            <strong>Power law</strong> (irradiance = a×PWM^b, fits LED physics with few points) or
-            <strong>Piecewise-linear</strong> (more accurate when many points are available).
-            Points are entered in the current <strong>display unit</strong> (Settings &rarr; Display Unit).
-            Each unit (µmol / µW·cm⁻²) is calibrated independently &mdash; the Setup tab shows the
-            calibration for whichever unit is selected, and an uncalibrated unit reads 0 until you calibrate it.
-        </p>
+        <div id="calWarning" class="cal-warning hidden">
+            <span class="cal-warning-icon">&#9888;</span>
+            <span><strong>Uncalibrated</strong> — showing dummy values for <span id="calWarningSide">top</span> / <span id="calWarningUnit">µmol m⁻² s⁻¹</span>. Enter real measurements below to replace the placeholder data.</span>
+        </div>
+        <p class="hint">Enter measurement points per channel (min. 2, PWM 0–4095). Always include a <strong>0, 0</strong> point. <strong>Power law</strong> fits LED physics well with few points; <strong>Piecewise-linear</strong> is more accurate with many points. Points use the current display unit (Settings → Display Unit). Each side and unit is calibrated independently.</p>
         <div class="cal-side-selector" id="calSideToggle" style="margin-bottom: .6rem;">
             <span class="cal-side-label">Calibrating</span>
             <button class="calside-btn" data-calside="top">Top</button>
