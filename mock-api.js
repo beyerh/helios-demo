@@ -108,9 +108,8 @@
         fanRunning: false,
     };
     let tempLog = [];          // [{t, c}]
-    let tempBase = 24.0;
+    let tempBase = 25.0;
     let lastLoggedMinute = -1;
-    let logStartTime = Date.now();
 
     // ── Run logs (in-memory, not persisted) ───────────────────────────────────
     let runLogs = [];          // [{name, csv, size}]
@@ -201,35 +200,43 @@
 
     // ── Temperature simulation (2 s tick) ─────────────────────────────────────
     function tempTick() {
-        // Temperature drifts up when LEDs are running, cools down when idle
+        // Equilibrium temperature depends on total LED output (PWM sum).
+        // Low intensity (~10-20 µmol) → ~37.0-37.2 °C, high intensity → ~38 °C.
+        // The fan keeps things from going higher.
         if (state.running) {
-            tempBase = Math.min(tempBase + (Math.random() * 0.15 + 0.05), 42.0);
+            var pwmSum = state.currentCh1 + state.currentCh2 + state.currentCh3;
+            var pwmFrac = Math.min(1, pwmSum / (3 * 4095));
+            var equilibrium = 37.0 + pwmFrac * 1.0;  // 37.0 → 38.0
+            tempBase += (equilibrium - tempBase) * 0.08;
         } else {
-            tempBase = Math.max(tempBase - (Math.random() * 0.1 + 0.05), 22.0);
+            tempBase += (24.0 - tempBase) * 0.05;
         }
-        const noise = (Math.random() - 0.5) * 0.6;
+        const noise = (Math.random() - 0.5) * 0.3;
         tempState.current = Math.round((tempBase + noise) * 10) / 10;
 
         // Auto fan logic
         if (tempState.fanMode === 'auto') {
-            tempState.fanRunning = tempState.current >= 35.0;
-            if (tempState.current <= 30.0) tempState.fanRunning = false;
+            tempState.fanRunning = tempState.current >= 37.5;
+            if (tempState.current <= 37.0) tempState.fanRunning = false;
         } else if (tempState.fanMode === 'on') {
             tempState.fanRunning = true;
         } else {
             tempState.fanRunning = false;
         }
 
-        // Log one sample per elapsed minute
-        const elapsedMin = Math.floor((Date.now() - logStartTime) / 60000);
-        if (elapsedMin !== lastLoggedMinute) {
-            lastLoggedMinute = elapsedMin;
-            tempLog.push({ t: elapsedMin, c: tempState.current });
-            if (tempLog.length > 720) tempLog.shift();
+        // Log one sample per elapsed minute (synced to engine elapsed time,
+        // not wall-clock, so the chart x-axis matches the elapsed display)
+        if (state.running) {
+            const elapsedMin = Math.floor(state.elapsed / 60000);
+            if (elapsedMin !== lastLoggedMinute) {
+                lastLoggedMinute = elapsedMin;
+                tempLog.push({ t: elapsedMin, c: tempState.current });
+                if (tempLog.length > 720) tempLog.shift();
 
-            // Also append to active run log
-            if (activeRun) {
-                activeRun.lines.push(elapsedMin + ',' + tempState.current.toFixed(2));
+                // Also append to active run log
+                if (activeRun) {
+                    activeRun.lines.push(elapsedMin + ',' + tempState.current.toFixed(2));
+                }
             }
         }
     }
@@ -443,7 +450,6 @@
 
         tempLog = [];
         lastLoggedMinute = -1;
-        logStartTime = Date.now();
         startTime = Date.now();
 
         startRunLog(body);
