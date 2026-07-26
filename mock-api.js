@@ -55,6 +55,10 @@
                 d.settings = d.settings || defaultSettings();
                 d.tempOffset = d.tempOffset || 0;
                 d.runCounter = d.runCounter || 0;
+                d.engineState = d.engineState || null;
+                d.tempLog = d.tempLog || [];
+                d.runLogs = d.runLogs || [];
+                d.activeRun = d.activeRun || null;
                 return d;
             }
         } catch (e) { /* ignore */ }
@@ -64,19 +68,34 @@
             settings: defaultSettings(),
             tempOffset: 0,
             runCounter: 0,
+            engineState: null,
+            tempLog: [],
+            runLogs: [],
+            activeRun: null,
         };
     }
 
     function saveStore() {
         try {
+            // Cap run logs to avoid exceeding localStorage limits (~5 MB)
+            var cappedLogs = data.runLogs;
+            var totalSize = cappedLogs.reduce(function (s, r) { return s + (r.csv || '').length; }, 0);
+            while (cappedLogs.length > 0 && totalSize > 2_000_000) {
+                var removed = cappedLogs.shift();
+                totalSize -= (removed.csv || '').length;
+            }
             localStorage.setItem(STORE_KEY, JSON.stringify({
                 presets: data.presets,
                 calibration: data.calibration,
                 settings: data.settings,
                 tempOffset: data.tempOffset,
                 runCounter: data.runCounter,
+                engineState: data.engineState,
+                tempLog: (data.tempLog || []).slice(-360),  // last 6 h
+                runLogs: cappedLogs,
+                activeRun: data.activeRun,
             }));
-        } catch (e) { /* ignore */ }
+        } catch (e) { /* ignore quota errors */ }
     }
 
     const data = loadStore();
@@ -107,16 +126,117 @@
         fanSpeed: 100,
         fanRunning: false,
     };
-    let tempLog = [];          // [{t, c}]
+    let tempLog = data.tempLog || [];  // [{t, c}]
     let tempBase = 25.0;
-    let lastLoggedMinute = -1;
+    let lastLoggedMinute = tempLog.length > 0 ? tempLog[tempLog.length - 1].t : -1;
 
     // ── Run logs (in-memory, not persisted) ───────────────────────────────────
-    let runLogs = [];          // [{name, csv, size}]
-    let activeRun = null;      // {name, lines, meta}
+    let runLogs = data.runLogs || [];   // [{name, csv, size}]
+    let activeRun = data.activeRun || null;  // {name, lines}
 
     // ── Engine timing ─────────────────────────────────────────────────────────
     let startTime = 0;
+
+    // ── Persist engine state for refresh survival ─────────────────────────────
+    function saveEngineState() {
+        if (state.running) {
+            data.engineState = {
+                running: true,
+                mode: state.mode,
+                ch1: state.ch1, ch2: state.ch2, ch3: state.ch3,
+                duration: state.duration,
+                pulseOnMs: state.pulseOnMs,
+                pulseOffMs: state.pulseOffMs,
+                leadTime: state.leadTime,
+                inLead: state.inLead,
+                elapsed: state.elapsed,
+                phases: state.phases || null,
+                numPhases: state.numPhases,
+                presetName: state.presetName || null,
+                presetSlot: state.presetSlot !== undefined ? state.presetSlot : null,
+                illum: state.illum || null,
+                savedAt: Date.now(),
+            };
+        } else {
+            data.engineState = null;
+        }
+        data.tempLog = tempLog;
+        data.activeRun = activeRun;
+        saveStore();
+    }
+
+    // ── Restore running state from previous session ───────────────────────────
+    function restoreEngineState() {
+        var es = data.engineState;
+        if (!es || !es.running) return false;
+
+        // Check if the run has expired while the page was closed
+        if (es.duration > 0) {
+            var elapsedAtSave = es.elapsed || 0;
+            var wallElapsed = Date.now() - es.savedAt + elapsedAtSave;
+            if (wallElapsed >= es.duration * 1000) {
+                // Run finished while away — finalize the log
+                state.expired = true;
+                data.engineState = null;
+                saveStore();
+                return false;
+            }
+        }
+
+        state.running = true;
+        state.expired = false;
+        state.mode = es.mode || 'constant';
+        state.ch1 = es.ch1 || 0;
+        state.ch2 = es.ch2 || 0;
+        state.ch3 = es.ch3 || 0;
+        state.duration = es.duration || 0;
+        state.pulseOnMs = es.pulseOnMs || 10000;
+        state.pulseOffMs = es.pulseOffMs || 10000;
+        state.leadTime = es.leadTime || 0;
+        state.inLead = es.inLead || false;
+        state.elapsed = es.elapsed || 0;
+
+        if (es.phases) {
+            state.phases = es.phases;
+            state.numPhases = es.numPhases || es.phases.length;
+            state.seqPhase = 0;
+        }
+
+        if (es.presetName) state.presetName = es.presetName;
+        if (es.presetSlot !== null) state.presetSlot = es.presetSlot;
+
+        // Recalculate startTime so elapsed continues from where it left off
+        startTime = Date.now() - state.elapsed;
+
+        // Restore current channel outputs
+        if (state.inLead) {
+            state.currentCh1 = 0;
+            state.currentCh2 = 0;
+            state.currentCh3 = 0;
+        } else if (state.mode === 'sequential' && state.phases) {
+            var totalCycle = state.phases.reduce(function (s, p) { return s + p.dur; }, 0);
+            if (totalCycle > 0) {
+                var cyclePos = state.elapsed % totalCycle;
+                var accum = 0;
+                for (var i = 0; i < state.phases.length; i++) {
+                    accum += state.phases[i].dur;
+                    if (cyclePos < accum) {
+                        state.seqPhase = i;
+                        state.currentCh1 = state.phases[i].ch1 || 0;
+                        state.currentCh2 = state.phases[i].ch2 || 0;
+                        state.currentCh3 = state.phases[i].ch3 || 0;
+                        break;
+                    }
+                }
+            }
+        } else {
+            state.currentCh1 = state.ch1;
+            state.currentCh2 = state.ch2;
+            state.currentCh3 = state.ch3;
+        }
+
+        return true;
+    }
 
     // ── Engine simulation (100 ms tick) ───────────────────────────────────────
     function engineTick() {
@@ -239,6 +359,10 @@
                 }
             }
         }
+
+        // Persist state every temp tick (2 s) so a page refresh
+        // retains elapsed time, temp log, and active run data.
+        saveEngineState();
     }
 
     setInterval(engineTick, 100);
@@ -335,6 +459,8 @@
             if (url.indexOf('/api/presets/') === 0) return { data: deletePreset(url) };
             if (url === '/api/runs' || url === '/api/runs/') {
                 runLogs = [];
+                data.runLogs = runLogs;
+                saveStore();
                 return { data: { ok: true } };
             }
             if (url.indexOf('/api/runs/') === 0) return { data: deleteRunLog(url) };
@@ -453,6 +579,7 @@
         startTime = Date.now();
 
         startRunLog(body);
+        saveEngineState();
         return { ok: true };
     }
 
@@ -465,6 +592,7 @@
         state.currentCh2 = 0;
         state.currentCh3 = 0;
         finalizeRunLog();
+        saveEngineState();
         return { ok: true };
     }
 
@@ -490,6 +618,7 @@
             state.duration = 0;
             startTime = Date.now();
         }
+        saveEngineState();
         return { ok: true };
     }
 
@@ -570,6 +699,7 @@
             'minutes,temperature_C',
         ];
         activeRun = { name: name, lines: lines };
+        data.activeRun = activeRun;
         saveStore();
     }
 
@@ -579,6 +709,9 @@
         runLogs.push({ name: activeRun.name, csv: csv, size: csv.length });
         if (runLogs.length > 30) runLogs.shift();
         activeRun = null;
+        data.activeRun = null;
+        data.runLogs = runLogs;
+        saveStore();
     }
 
     function runLogList() {
@@ -588,6 +721,8 @@
     function deleteRunLog(url) {
         var name = decodeURIComponent(url.split('/api/runs/')[1]);
         runLogs = runLogs.filter(function (r) { return r.name !== name; });
+        data.runLogs = runLogs;
+        saveStore();
         return { ok: true };
     }
 
@@ -614,6 +749,39 @@
         }
     });
 
+    // ── Restore running state from previous page load ─────────────────────────
+    var restored = restoreEngineState();
+
+    // ── Auto-start on page load (simulates power-on autostart) ────────────────
+    if (!restored && data.settings.autostart && data.settings.autostart.enabled) {
+        var slot = data.settings.autostart.presetSlot;
+        if (slot !== undefined && slot >= 0 && data.presets[slot]) {
+            var p = data.presets[slot];
+            // Simulate the firmware loading the preset and starting it
+            setTimeout(function () {
+                handleStart({
+                    mode: p.mode || 'constant',
+                    ch1: p.ch1 || 0,
+                    ch2: p.ch2 || 0,
+                    ch3: p.ch3 || 0,
+                    pulseOnMs: p.pulseOnMs || 10000,
+                    pulseOffMs: p.pulseOffMs || 10000,
+                    duration: p.totalDuration_s || 0,
+                    leadTime: p.leadTime_s || 0,
+                    phases: p.phases || null,
+                    illum: p.illum || 'top',
+                });
+                state.presetName = p.name || '';
+                state.presetSlot = slot;
+                saveEngineState();
+            }, 500);  // small delay so app.js has time to initialise
+        }
+    }
+
+    // Persist state on page unload
+    window.addEventListener('beforeunload', saveEngineState);
+
     console.log('%c Helios Mock API ', 'background:#4fc3f7;color:#111;font-weight:bold;padding:2px 6px;border-radius:3px;',
-        'Demo mode active — all API calls simulated in-browser.');
+        'Demo mode active — all API calls simulated in-browser.' +
+        (restored ? ' Running experiment restored.' : ''));
 })();
