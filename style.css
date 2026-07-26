@@ -1,0 +1,641 @@
+/* ── Reset & base ──────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+    --bg:       #0f0f1a;
+    --surface:  #1a1a2e;
+    --card:     #16213e;
+    --border:   #1f3050;
+    --text:     #e0e0e0;
+    --text-dim: #8892a4;
+    --accent:   #4fc3f7;
+    --red:      #ef5350;
+    --green:    #66bb6a;
+    --blue:     #42a5f5;
+    /* Per-channel display colours (overridden at runtime by Settings ->
+       Channel Definitions, persisted in localStorage by app.js). */
+    --ch1: #2196f3;   /* default: 450 nm (blue)        */
+    --ch2: #e53935;   /* default: 660 nm (red)         */
+    --ch3: #7e1010;   /* default: 730 nm (deep red)    */
+    --start:    #66bb6a;
+    --stop:     #ef5350;
+    --radius:   10px;
+}
+
+html { font-size: 15px; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 2rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Header ────────────────────────────────────────────────────────────── */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.2rem .6rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+}
+header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: .5px; }
+.subtitle  { font-size: .75rem; color: var(--text-dim); display: block; margin-top: 2px; }
+.header-right { display: flex; align-items: center; gap: .5rem; font-size: .85rem; }
+
+/* ── Illumination toggle (header) ──────────────────────────────────────── */
+.header-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+.header-illum-label {
+    font-size: .65rem;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--text-dim);
+}
+.header-illum-seg {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+}
+.illum-btn {
+    border: none;
+    background: var(--surface);
+    color: var(--text-dim);
+    font-size: .75rem;
+    font-weight: 600;
+    padding: .35rem .7rem;
+    cursor: pointer;
+    transition: background .2s, color .2s;
+    flex: 1;
+}
+.illum-btn:hover { background: var(--card); color: var(--text); }
+.illum-btn.selected {
+    background: var(--accent);
+    color: #111;
+}
+
+/* ── Calibration side selector ──────────────────────────────────────────── */
+.cal-side-selector {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+.cal-side-label {
+    font-size: .72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--text-dim);
+    margin-right: .3rem;
+}
+.calside-btn {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+    font-size: .75rem;
+    font-weight: 600;
+    padding: .3rem .6rem;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all .2s;
+}
+.calside-btn:hover { border-color: var(--accent); color: var(--text); }
+.calside-btn.selected {
+    background: var(--accent);
+    color: #111;
+    border-color: var(--accent);
+}
+
+.dot {
+    width: 10px; height: 10px; border-radius: 50%; display: inline-block;
+    transition: background .3s;
+}
+.dot-off { background: #555; }
+.dot-on  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+/* ── Tabs ──────────────────────────────────────────────────────────────── */
+.tabs {
+    display: flex;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+}
+.tab {
+    flex: 1;
+    padding: .7rem 0;
+    border: none;
+    background: none;
+    color: var(--text-dim);
+    font-size: .8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color .2s, border-color .2s;
+    border-bottom: 2px solid transparent;
+}
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab:hover  { color: var(--text); }
+
+.tab-content { display: none; padding: 1rem; max-width: 480px; margin: 0 auto; }
+.tab-content.active { display: block; }
+
+/* ── Cards ─────────────────────────────────────────────────────────────── */
+.card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.1rem;
+    margin-bottom: .8rem;
+}
+.card h2 {
+    font-size: .9rem;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    color: var(--text-dim);
+    margin-bottom: .7rem;
+}
+
+/* ── Mode selector ─────────────────────────────────────────────────────── */
+.mode-selector { display: flex; gap: .5rem; }
+.mode-btn {
+    flex: 1;
+    padding: .55rem .3rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text-dim);
+    font-size: .8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+}
+.mode-btn:hover    { border-color: var(--accent); color: var(--text); }
+.mode-btn.selected { background: var(--accent); color: #111; border-color: var(--accent); }
+
+/* ── Sliders ───────────────────────────────────────────────────────────── */
+.slider-group { margin-bottom: .7rem; }
+.slider-group label { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+.slider-group label > span:first-child { width: 80px; font-size: .82rem; font-weight: 600; }
+.slider {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: #2a2a40;
+    outline: none;
+}
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+}
+.slider.ch1::-webkit-slider-thumb   { background: var(--ch1); }
+.slider.ch2::-webkit-slider-thumb { background: var(--ch2); }
+.slider.ch3::-webkit-slider-thumb  { background: var(--ch3); }
+
+.slider-vals { display: flex; gap: .4rem; width: 100%; padding-left: 84px; font-size: .78rem; }
+.pwm-val  { color: var(--text); font-weight: 600; min-width: 28px; }
+.sci-val  { color: var(--text-dim); }
+
+.ch-label    { font-size: .82rem; font-weight: 600; }
+.ch-1        { color: var(--ch1); }
+.ch-2        { color: var(--ch2); }
+.ch-3        { color: var(--ch3); }
+
+/* ── Colour preview ────────────────────────────────────────────────────── */
+.color-preview {
+    width: 100%;
+    height: 32px;
+    border-radius: 6px;
+    margin-top: .5rem;
+    border: 1px solid var(--border);
+    transition: background .15s;
+}
+
+/* ── Pulse hint ────────────────────────────────────────────────────────── */
+.hint { font-size: .78rem; color: var(--text-dim); line-height: 1.5; }
+.hint code { background: var(--surface); padding: 1px 5px; border-radius: 3px; font-size: .75rem; }
+
+/* ── Sequential editor ─────────────────────────────────────────────────── */
+.seq-phase {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+    align-items: center;
+    padding: .5rem .6rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: .4rem;
+}
+.seq-phase .phase-num { font-weight: 700; font-size: .8rem; color: var(--accent); min-width: 18px; }
+.seq-phase input[type="number"] {
+    width: 70px;
+    padding: .3rem .35rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--card);
+    color: var(--text);
+    font-size: .8rem;
+    text-align: center;
+}
+.seq-phase .phase-swatch {
+    width: 22px; height: 22px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+}
+.seq-phase .lbl { font-size: .72rem; color: var(--text-dim); }
+.btn-remove-phase {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--stop);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0 .3rem;
+}
+
+/* ── Duration ──────────────────────────────────────────────────────────── */
+.duration-row { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+.toggle-label { display: flex; align-items: center; gap: .5rem; font-size: .85rem; cursor: pointer; }
+.toggle-label input { width: 16px; height: 16px; }
+.duration-inputs { display: flex; align-items: center; gap: .3rem; font-size: .82rem; }
+.dur-input {
+    width: 48px; padding: .35rem; text-align: center;
+    border: 1px solid var(--border); border-radius: 4px;
+    background: var(--card); color: var(--text); font-size: .82rem;
+}
+
+/* ── Elapsed display ───────────────────────────────────────────────────── */
+.elapsed-display { font-size: 1.6rem; font-weight: 700; letter-spacing: 1px; text-align: center; }
+.progress-bar-container {
+    width: 100%; height: 6px; background: #2a2a40; border-radius: 3px; margin-top: .5rem; overflow: hidden;
+}
+.progress-bar { height: 100%; background: var(--accent); border-radius: 3px; transition: width .5s; width: 0; }
+
+/* ── Buttons ───────────────────────────────────────────────────────────── */
+.btn {
+    display: inline-block;
+    padding: .65rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    font-size: .9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity .2s, transform .1s;
+}
+.btn:active { transform: scale(.97); }
+.btn-start { background: var(--start); color: #111; width: 100%; font-size: 1.05rem; padding: .8rem; }
+.btn-stop  { background: var(--stop);  color: #fff; width: 100%; font-size: 1.05rem; padding: .8rem; }
+.btn-small { background: var(--accent); color: #111; font-size: .8rem; padding: .45rem 1rem; margin-top: .5rem; }
+.action-row { margin-top: .3rem; }
+
+/* ── Preset list ───────────────────────────────────────────────────────── */
+.preset-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .55rem .7rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: .4rem;
+}
+.preset-item .preset-info { flex: 1; }
+.preset-item .preset-name { font-weight: 600; font-size: .85rem; }
+.preset-item .preset-notes { font-size: .72rem; color: var(--text-dim); }
+.preset-item .preset-actions { display: flex; gap: .4rem; }
+.preset-item button {
+    padding: .3rem .6rem; border: 1px solid var(--border); border-radius: 4px;
+    background: var(--card); color: var(--text); font-size: .75rem; cursor: pointer;
+}
+.preset-item button:hover { border-color: var(--accent); }
+.preset-item button.del { color: var(--stop); }
+
+/* ── Text input ────────────────────────────────────────────────────────── */
+.text-input {
+    width: 100%;
+    padding: .5rem .6rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: .85rem;
+    margin-bottom: .4rem;
+}
+.text-input::placeholder { color: #556; }
+
+/* ── Toast ─────────────────────────────────────────────────────────────── */
+.toast {
+    position: fixed;
+    bottom: 1.2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--accent);
+    color: #111;
+    padding: .55rem 1.2rem;
+    border-radius: 6px;
+    font-size: .82rem;
+    font-weight: 600;
+    z-index: 100;
+    opacity: 0;
+    transition: opacity .3s;
+    pointer-events: none;
+}
+.toast.show { opacity: 1; }
+
+/* ── Number inputs ───────────────────────────────────────────────────── */
+input[type="number"] {
+    color-scheme: dark;
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    opacity: 1;
+    -webkit-appearance: inner-spin-button;
+    appearance: inner-spin-button;
+    background-color: #2a2a4a;
+    color: var(--text);
+    border-radius: 3px;
+}
+
+/* Hide native spinners on PWM inputs — custom steppers replace them */
+.pwm-num-input::-webkit-inner-spin-button,
+.pwm-num-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.pwm-num-input {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+/* ── PWM number input ──────────────────────────────────────────────── */
+.pwm-num-input {
+    width: 60px; padding: .3rem .4rem; text-align: right;
+    border: 1px solid var(--border); border-radius: 4px;
+    background: var(--card); color: var(--text); font-size: .82rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+/* ── Custom PWM stepper buttons ─────────────────────────────────────── */
+.pwm-stepper {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+}
+.stepper-btn {
+    width: 24px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--card-elev, #2a2a4a);
+    color: var(--text);
+    font-size: .9rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    transition: background .1s, border-color .1s;
+}
+.stepper-btn:hover {
+    background: var(--accent, #4a4a6a);
+    border-color: var(--accent, #4a4a6a);
+}
+.stepper-btn:active {
+    background: var(--accent-dim, #3a3a5a);
+}
+.stepper-btn:focus {
+    outline: none;
+}
+
+/* ── Scientific irradiance input (display only) ───────────────────── */
+.sci-input {
+    width: 120px; padding: .3rem .4rem; text-align: right;
+    border: 1px solid transparent; border-radius: 4px;
+    background: transparent; color: var(--text); font-size: .82rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    cursor: default;
+}
+.sci-input:focus { outline: none; }
+.sci-input::-webkit-outer-spin-button,
+.sci-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.sci-input {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+/* ── Scientific value group (input + unit + converted) ───────────────── */
+.sci-group {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: .3rem;
+}
+.sci-input { order: 1; }
+.sci-unit  { order: 2; }
+.sci-converted {
+    order: 3;
+    width: 100%;
+    text-align: right;
+    font-size: .7rem; color: var(--text-dim);
+    font-style: italic;
+    white-space: nowrap;
+}
+
+/* ── High intensity warning (PWM > 3000) ─────────────────────────────── */
+.high-intensity {
+    color: var(--stop) !important;
+}
+
+/* ── Display unit selector ──────────────────────────────────────────── */
+.unit-selector {
+    display: flex; flex-direction: column; gap: .4rem;
+    margin-bottom: .6rem;
+}
+.unit-selector label {
+    display: flex; align-items: center; gap: .4rem;
+    font-size: .82rem; cursor: pointer;
+}
+.unit-selector input[type="radio"] {
+    accent-color: var(--accent);
+}
+
+/* ── Pulse time fields ───────────────────────────────────────────────── */
+.time-field { margin-bottom: .7rem; }
+.time-field-label { display: block; font-size: .82rem; font-weight: 600; margin-bottom: .3rem; }
+
+/* ── Calibration ───────────────────────────────────────────────────────── */
+.cal-channel {
+    padding: .6rem 0;
+    border-bottom: 1px solid var(--border);
+}
+.cal-channel:last-of-type { border-bottom: none; }
+.cal-ch-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: .3rem; }
+.btn-tiny {
+    padding: .2rem .6rem; font-size: .7rem; border: 1px solid var(--border);
+    border-radius: 4px; background: var(--surface); color: var(--accent); cursor: pointer;
+}
+.btn-tiny:hover { background: var(--border); }
+.cal-points-list { display: flex; flex-direction: column; gap: .3rem; }
+.cal-point-row {
+    display: flex; gap: .4rem; align-items: center;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; padding: .3rem .5rem;
+}
+.cal-point-row label { font-size: .72rem; color: var(--text-dim); display: flex; align-items: center; gap: .25rem; }
+.cal-input {
+    width: 90px; padding: .3rem .35rem; text-align: center;
+    border: 1px solid var(--border); border-radius: 4px;
+    background: var(--card); color: var(--text); font-size: .8rem;
+}
+.cal-remove { background: none; border: none; color: var(--stop); cursor: pointer; font-size: .9rem; padding: 0 .2rem; }
+.cal-graph { width: 100%; height: 120px; margin-top: .5rem; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+
+/* ── Temperature ──────────────────────────────────────────────────────── */
+.temp-display { display: flex; align-items: baseline; gap: .3rem; }
+.temp-value { font-size: 1.6rem; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+.temp-unit { font-size: 1rem; color: var(--text-dim); }
+.fan-indicator { font-size: .75rem; padding: .15rem .5rem; background: var(--accent); color: #fff; border-radius: 10px; }
+.temp-chart { width: 100%; height: 80px; margin-top: .5rem; border: 1px solid var(--border); border-radius: 6px; }
+
+/* ── Temperature calibration rows ─────────────────────────────────────── */
+.cal-row { display: flex; align-items: center; gap: .4rem; margin: .25rem 0; font-size: .82rem; }
+.cal-row-lbl { min-width: 6.5rem; color: var(--text-dim); }
+.cal-row-val { font-variant-numeric: tabular-nums; font-weight: 600; }
+.cal-row .text-input { margin-bottom: 0; }
+
+/* ── Fan controls ────────────────────────────────────────────────────── */
+.fan-controls { display: flex; flex-direction: column; gap: .6rem; }
+.fan-mode-selector { gap: .3rem; }
+
+/* ── Program steps ───────────────────────────────────────────────────── */
+.program-opts { margin-top: .6rem; display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
+.seq-phase-dur { display: flex; gap: .2rem; align-items: center; font-size: .72rem; color: var(--text-dim); margin-top: .3rem; }
+.seq-phase-dur input { width: 40px; }
+
+/* ── Channel definitions form (Settings tab) ──────────────────────── */
+.chdef-row {
+    display: flex; align-items: center; gap: .5rem;
+    margin: .35rem 0;
+}
+.chdef-row .ch-label { width: 80px; flex-shrink: 0; }
+.chdef-enable {
+    display: flex; align-items: center; gap: .35rem;
+    flex-shrink: 0; cursor: pointer;
+}
+.chdef-wl {
+    width: 60px; padding: .25rem .3rem; text-align: right;
+    border: 1px solid var(--border); border-radius: 4px;
+    background: var(--card); color: var(--text); font-size: .78rem;
+    font-variant-numeric: tabular-nums;
+}
+.chdef-wl-unit {
+    font-size: .75rem; color: var(--text-dim); margin-left: -.2rem;
+}
+.chdef-enable input[type="checkbox"] { margin: 0; }
+
+/* ── Run logs table (Settings tab) ────────────────────────────────── */
+.runlogs-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: .4rem 0 .6rem;
+    font-size: .82rem;
+}
+.runlogs-table th, .runlogs-table td {
+    padding: .35rem .4rem;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: middle;
+}
+.runlogs-table th {
+    font-size: .72rem; font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: .04em;
+}
+.runlogs-table td:nth-child(2) { width: 70px; color: var(--text-dim); }
+.runlogs-table td:nth-child(3) { width: 170px; white-space: nowrap; }
+.runlogs-table td .btn-tiny    { margin-right: .25rem; }
+/* Hardware-channel identifier ("Channel 1/2/3"): neutral text colour so it
+   reads as a fixed board-level label, distinct from the user-configurable
+   wavelength/colour that follows on the same row. */
+.chdef-id {
+    width: 90px; flex-shrink: 0;
+    font-size: .82rem; font-weight: 600;
+    color: var(--text);
+}
+.chdef-label  { flex: 1; min-width: 0; }
+.chdef-color  {
+    width: 38px; height: 32px; padding: 0; border: 1px solid var(--border);
+    border-radius: 4px; background: transparent; cursor: pointer;
+}
+
+/* ── Safety lock bar ──────────────────────────────────────────────────── */
+.safety-lock {
+    display: flex; align-items: center; gap: .5rem;
+    padding: .45rem .6rem; background: var(--border); border-radius: 6px;
+    margin-bottom: .6rem; font-size: .78rem; color: var(--text-dim);
+}
+.lock-icon { font-size: 1.1rem; }
+.cal-locked .cal-channel,
+.cal-locked #btnSaveCal,
+.cal-locked #btnImportCal { pointer-events: none; opacity: .45; }
+
+/* Global settings lock */
+.settings-locked .locked-setting {
+    opacity: .55;
+}
+.settings-locked .locked-setting input,
+.settings-locked .locked-setting select,
+.settings-locked .locked-setting button:not(.safety-lock button),
+.settings-locked .locked-setting .btn:not(#btnUnlockSettings):not(#btnLockSettings) {
+    pointer-events: none;
+    opacity: .5;
+}
+.settings-locked #settingsLockCard,
+.settings-locked .safety-lock,
+.settings-locked #btnUnlockSettings,
+.settings-locked #btnLockSettings {
+    pointer-events: auto;
+    opacity: 1;
+}
+
+/* ── Temp chart improved ──────────────────────────────────────────────── */
+.temp-chart-wrap { position: relative; }
+.temp-chart { width: 100%; height: 100px; margin-top: .5rem; border: 1px solid var(--border); border-radius: 6px; }
+.temp-time-range {
+    display: flex; justify-content: space-between;
+    font-size: .68rem; color: var(--text-dim); padding: .15rem .3rem 0;
+}
+.temp-actions { margin-top: .5rem; }
+
+/* ── Seq phase irradiance readout ─────────────────────────────────────── */
+.seq-irrad { font-size: .68rem; color: var(--text-dim); width: 100%; padding-left: 22px; margin-top: .1rem; }
+
+/* ── Utility ───────────────────────────────────────────────────────────── */
+.hidden { display: none !important; }
+
+/* ── Responsive ────────────────────────────────────────────────────────── */
+@media (max-width: 380px) {
+    .slider-vals { padding-left: 0; }
+    .seq-phase input[type="number"] { width: 62px; }
+    .zone-grid { max-width: 280px; }
+}

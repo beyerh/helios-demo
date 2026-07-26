@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Helios</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ── Demo mode banner ──────────────────────────────────────────────── -->
+<div style="background:#ff9800;color:#111;padding:.3rem 1rem;text-align:center;font-size:.75rem;font-weight:600;">
+    DEMO MODE &mdash; simulated device, no hardware required. Data persists in browser localStorage.
+</div>
+
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<header>
+    <div class="header-left">
+        <h1 id="deviceNameHeader">Helios</h1>
+        <span class="subtitle">Cell Culture Illuminator v0.1</span>
+    </div>
+    <div class="header-center" id="illumToggle">
+        <span class="header-illum-label">Illumination</span>
+        <div class="header-illum-seg">
+            <button class="illum-btn" data-illum="top">Top</button>
+            <button class="illum-btn selected" data-illum="bottom">Bottom</button>
+        </div>
+    </div>
+    <div class="header-right">
+        <span id="statusDot" class="dot dot-off"></span>
+        <span id="statusText">OFF</span>
+    </div>
+</header>
+
+<!-- ── Tab bar ─────────────────────────────────────────────────────────── -->
+<nav class="tabs">
+    <button class="tab active" data-tab="setup">Setup</button>
+    <button class="tab" data-tab="presets">Presets</button>
+    <button class="tab" data-tab="calibration">Calibration</button>
+    <button class="tab" data-tab="settings">Settings</button>
+</nav>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!--  TAB: Setup                                                            -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<section id="tab-setup" class="tab-content active">
+
+    <!-- Mode selector -->
+    <div class="card">
+        <h2>Mode</h2>
+        <div class="mode-selector">
+            <button class="mode-btn selected" data-mode="constant">Constant</button>
+            <button class="mode-btn" data-mode="pulsed">Pulsed</button>
+            <button class="mode-btn" data-mode="sequential">Sequential</button>
+        </div>
+        <div id="runningPresetLabel" class="running-preset-label" style="display:none;margin-top:12px;padding:8px 12px;background:#e8f5e9;border-radius:6px;color:#2e7d32;font-weight:500;"></div>
+    </div>
+
+    <!-- Channel intensities (3 PWM outputs, 12-bit resolution 0–4095) -->
+    <div class="card" id="colorCard">
+        <h2>Channel Intensities</h2>
+        <p class="hint">Drag the slider for coarse adjustment or type the exact PWM value (0–4095). The irradiance read-out (right-hand field) is derived from the current calibration and display unit chosen in Settings → Display Unit.</p>
+
+        <div class="slider-group" id="sliderGroup1">
+            <span class="ch-label ch-1" id="label1">450 nm</span>
+            <input type="range" id="slider1" min="0" max="4095" value="0" class="slider ch1">
+            <div class="slider-vals">
+                <div class="pwm-stepper">
+                    <button type="button" class="stepper-btn" data-step="-1" data-target="num1" aria-label="Decrease" tabindex="-1">&minus;</button>
+                    <input type="number" id="num1" min="0" max="4095" value="0" class="pwm-num-input" title="Raw PWM (0–4095)">
+                    <button type="button" class="stepper-btn" data-step="1" data-target="num1" aria-label="Increase" tabindex="-1">+</button>
+                </div>
+                <div class="sci-group">
+                    <input type="number" id="sci1" min="0" step="0.01" value="0" class="sci-input" title="Irradiance (display only)" readonly>
+                    <span class="sci-unit" id="sciUnit1">µmol m⁻² s⁻¹</span>
+                    <span class="sci-converted" id="sciConverted1"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="slider-group" id="sliderGroup2">
+            <span class="ch-label ch-2" id="label2">660 nm</span>
+            <input type="range" id="slider2" min="0" max="4095" value="0" class="slider ch2">
+            <div class="slider-vals">
+                <div class="pwm-stepper">
+                    <button type="button" class="stepper-btn" data-step="-1" data-target="num2" aria-label="Decrease" tabindex="-1">&minus;</button>
+                    <input type="number" id="num2" min="0" max="4095" value="0" class="pwm-num-input" title="Raw PWM (0–4095)">
+                    <button type="button" class="stepper-btn" data-step="1" data-target="num2" aria-label="Increase" tabindex="-1">+</button>
+                </div>
+                <div class="sci-group">
+                    <input type="number" id="sci2" min="0" step="0.01" value="0" class="sci-input" title="Irradiance (display only)" readonly>
+                    <span class="sci-unit" id="sciUnit2">µmol m⁻² s⁻¹</span>
+                    <span class="sci-converted" id="sciConverted2"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="slider-group" id="sliderGroup3">
+            <span class="ch-label ch-3" id="label3">730 nm</span>
+            <input type="range" id="slider3" min="0" max="4095" value="0" class="slider ch3">
+            <div class="slider-vals">
+                <div class="pwm-stepper">
+                    <button type="button" class="stepper-btn" data-step="-1" data-target="num3" aria-label="Decrease" tabindex="-1">&minus;</button>
+                    <input type="number" id="num3" min="0" max="4095" value="0" class="pwm-num-input" title="Raw PWM (0–4095)">
+                    <button type="button" class="stepper-btn" data-step="1" data-target="num3" aria-label="Increase" tabindex="-1">+</button>
+                </div>
+                <div class="sci-group">
+                    <input type="number" id="sci3" min="0" step="0.01" value="0" class="sci-input" title="Irradiance (display only)" readonly>
+                    <span class="sci-unit" id="sciUnit3">µmol m⁻² s⁻¹</span>
+                    <span class="sci-converted" id="sciConverted3"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live colour preview (mixed approximation of the three channels) -->
+        <div class="color-preview" id="colorPreview"></div>
+    </div>
+
+    <!-- Pulse parameters (shown only in pulsed mode) -->
+    <div class="card hidden" id="pulseCard">
+        <h2>Pulse Parameters</h2>
+
+        <div class="time-field">
+            <span class="time-field-label">ON time</span>
+            <div class="duration-inputs">
+                <input type="number" id="pulseOnH" min="0" max="999" value="0" class="dur-input"> h
+                <input type="number" id="pulseOnM" min="0" max="59"  value="0" class="dur-input"> m
+                <input type="number" id="pulseOnS" min="0" max="59"  value="10" class="dur-input"> s
+                <input type="number" id="pulseOnMs" min="0" max="999" value="0" class="dur-input dur-ms"> ms
+            </div>
+        </div>
+
+        <div class="time-field">
+            <span class="time-field-label">OFF time</span>
+            <div class="duration-inputs">
+                <input type="number" id="pulseOffH" min="0" max="999" value="0" class="dur-input"> h
+                <input type="number" id="pulseOffM" min="0" max="59"  value="0" class="dur-input"> m
+                <input type="number" id="pulseOffS" min="0" max="59"  value="10" class="dur-input"> s
+                <input type="number" id="pulseOffMs" min="0" max="999" value="0" class="dur-input dur-ms"> ms
+            </div>
+        </div>
+
+        <p class="hint" id="pulseHint">Cycle: 10 s ON → 10 s OFF (20 s period)</p>
+    </div>
+
+    <!-- Sequential / Program editor (shown only in sequential mode) -->
+    <div class="card hidden" id="seqCard">
+        <h2>Program Steps</h2>
+        <p class="hint">Each step's three channel values (0–4095) set the per-channel intensity.
+            Set all three to 0 for a dark interval. Duration supports hours down to milliseconds.</p>
+        <div id="seqPhases"></div>
+        <button class="btn btn-small" id="btnAddPhase">+ Add Step</button>
+        <p class="hint">The program loops indefinitely once started.</p>
+    </div>
+
+    <!-- Duration -->
+    <div class="card">
+        <h2>Duration</h2>
+        <div class="duration-row">
+            <label class="toggle-label">
+                <input type="checkbox" id="chkLead">
+                <span>Lead time</span>
+            </label>
+            <div class="duration-inputs hidden" id="leadInputs">
+                <input type="number" id="leadH" min="0" max="999" value="0" placeholder="h" class="dur-input"> h
+                <input type="number" id="leadM" min="0" max="59" value="1" placeholder="m" class="dur-input"> m
+                <input type="number" id="leadS" min="0" max="59" value="0" placeholder="s" class="dur-input"> s
+            </div>
+        </div>
+        <p class="hint">Optional pre-timer: the device waits this long (LEDs off) before the program starts.</p>
+        <div class="duration-row">
+            <label class="toggle-label">
+                <input type="checkbox" id="chkTimed">
+                <span>Timed run</span>
+            </label>
+            <div class="duration-inputs hidden" id="durationInputs">
+                <input type="number" id="durH" min="0" max="999" value="0" placeholder="h" class="dur-input"> h
+                <input type="number" id="durM" min="0" max="59" value="30" placeholder="m" class="dur-input"> m
+                <input type="number" id="durS" min="0" max="59" value="0" placeholder="s" class="dur-input"> s
+            </div>
+        </div>
+    </div>
+
+    <!-- Elapsed timer -->
+    <div class="card" id="elapsedCard" style="display:none;">
+        <h2 id="elapsedHeading">Elapsed</h2>
+        <p class="elapsed-display" id="elapsedDisplay">00:00:00</p>
+        <div class="progress-bar-container" id="progressContainer" style="display:none;">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+    </div>
+
+    <!-- Temperature (visible only when sensor detected) -->
+    <div class="card hidden" id="tempCard">
+        <h2>Temperature</h2>
+        <div class="temp-display">
+            <span class="temp-value" id="tempValue">--</span>
+            <span class="temp-unit">°C</span>
+            <span class="fan-indicator hidden" id="fanIndicator">🌬️ Fan</span>
+        </div>
+        <div class="temp-chart-wrap">
+            <canvas id="tempChart" width="300" height="100" class="temp-chart"></canvas>
+            <div class="temp-time-range" id="tempTimeRange"></div>
+        </div>
+        <div class="temp-actions">
+            <p class="hint" style="margin-top:.3rem">Live temperature updates every 2 s. The chart above shows the last ~12 h (RAM only, cleared on restart). For each experiment a full-length CSV is saved persistently to the device under <em>Run Logs</em> (Settings tab) — this survives power loss and covers the entire run.</p>
+        </div>
+    </div>
+
+    <!-- START / STOP -->
+    <div class="action-row">
+        <button class="btn btn-start" id="btnStart">START</button>
+        <button class="btn btn-stop hidden" id="btnStop">STOP</button>
+    </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!--  TAB: Presets                                                          -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<section id="tab-presets" class="tab-content">
+    <div class="card">
+        <h2>Save Current Settings</h2>
+        <input type="text" id="presetName" placeholder="Preset name" class="text-input">
+        <input type="text" id="presetNotes" placeholder="Notes (optional)" class="text-input">
+        <button class="btn btn-small" id="btnSavePreset">Save Preset</button>
+    </div>
+
+    <div class="card">
+        <h2>Saved Presets</h2>
+        <div id="presetList"><p class="hint">No presets yet.</p></div>
+    </div>
+
+    <div class="card">
+        <h2>Auto-Start on Power-On</h2>
+        <p class="hint">Automatically start a preset when unit is powered. Useful for multi-unit experiments.</p>
+        <label class="checkbox-label" style="display:flex; align-items:center; gap:.5rem; margin-bottom:.8rem;">
+            <input type="checkbox" id="chkAutoStart">
+            <span>Enable auto-start on power-on</span>
+        </label>
+        <div class="slider-group" id="autoStartPresetGroup" style="opacity:0.5; pointer-events:none;">
+            <label>
+                Preset to auto-start
+                <select id="selAutoStartPreset" style="width:100%; padding:.4rem; background:#1a1a2e; color:var(--text); border:1px solid var(--border); border-radius:4px;">
+                    <option value="-1">-- Select a preset --</option>
+                </select>
+            </label>
+        </div>
+        <button class="btn btn-small" id="btnSaveAutoStart">Save Auto-Start Settings</button>
+        <p class="hint" id="autoStartStatus" style="margin-top:.5rem;"></p>
+    </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!--  TAB: Settings                                                         -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<section id="tab-settings" class="tab-content">
+    <!-- Global Settings Lock -->
+    <div class="card" id="settingsLockCard">
+        <h2>Settings Safety Lock</h2>
+        <div class="safety-lock" id="globalLockBar">
+            <span class="lock-icon">&#x1f512;</span>
+            <span>All settings are <strong>locked</strong>. Unlock to modify calibration, fan, brightness, and default pattern.</span>
+            <button class="btn btn-tiny" id="btnUnlockSettings">Unlock</button>
+        </div>
+        <div class="hidden" id="globalUnlockedBar">
+            <span class="lock-icon">&#x1f513;</span>
+            <span>Settings editing enabled.</span>
+            <button class="btn btn-tiny" id="btnLockSettings">Lock</button>
+        </div>
+    </div>
+
+    <!-- Device Name -->
+    <div class="card locked-setting" id="deviceNameCard">
+        <h2>Device Name</h2>
+        <p class="hint">Name shown in the header. Give each unit a unique name (e.g. Helios001) to see at a glance which device you are connected to. Applies immediately.</p>
+        <div class="slider-group">
+            <label>
+                Display Name
+                <input type="text" id="deviceNameInput" maxlength="32" placeholder="Helios">
+            </label>
+        </div>
+        <div class="form-actions">
+            <button class="btn btn-small" id="btnSaveDeviceName">Save Name</button>
+        </div>
+        <p class="hint" id="deviceNameStatus"></p>
+    </div>
+
+    <!-- WiFi Settings -->
+    <div class="card locked-setting" id="wifiSettingsCard">
+        <h2>WiFi Access Point</h2>
+        <p class="hint">Change network name and password. Restart required after saving.</p>
+        <div class="slider-group">
+            <label>
+                Network Name (SSID)
+                <input type="text" id="wifiSsid" maxlength="32" placeholder="Helios001">
+            </label>
+            <label>
+                Password (min 8 characters)
+                <!-- Plain text input so the AP credentials stay visible to whoever
+                     is configuring the device; this is a single-user lab tool on
+                     an isolated AP, not a multi-tenant system. -->
+                <input type="text" id="wifiPassword" minlength="8" maxlength="63" placeholder="Helios001">
+            </label>
+        </div>
+        <div class="form-actions">
+            <button class="btn btn-small" id="btnSaveWiFi">Save WiFi Settings</button>
+            <button class="btn btn-small btn-secondary" id="btnRestart">Restart Unit</button>
+        </div>
+        <p class="hint" id="wifiStatus"></p>
+    </div>
+
+    <!-- Display Unit -->
+    <div class="card locked-setting" id="displayUnitCard">
+        <h2>Display Unit</h2>
+        <p class="hint">Choose the irradiance unit shown throughout the UI and used for calibration. When you switch units, you will see a different calibration dataset (top and bottom are stored independently per unit). If no calibration exists for the selected unit, you will need to calibrate.</p>
+        <div class="unit-selector">
+            <label>
+                <input type="radio" name="displayUnit" value="umol" checked>
+                µmol m⁻² s⁻¹ (photon flux)
+            </label>
+            <label>
+                <input type="radio" name="displayUnit" value="uwcm2">
+                μW cm⁻² (energy flux)
+            </label>
+        </div>
+        <div class="form-actions">
+            <button class="btn btn-small" id="btnSaveDisplayUnit">Save Unit Preference</button>
+        </div>
+    </div>
+
+    <!-- Channel Definitions (display label + colour + wavelength for each PWM channel) -->
+    <div class="card locked-setting" id="channelDefsCard">
+        <h2>Channel Definitions</h2>
+        <p class="hint">Set label, colour, and peak wavelength for each LED channel. Wavelength drives the µmol ↔ μW/cm² conversion. Uncheck a channel to hide it throughout the UI. Stored locally in this browser.</p>
+        <div class="chdef-row">
+            <label class="chdef-enable"><input type="checkbox" id="ch1Enabled" checked> <span class="chdef-id">Ch1</span></label>
+            <input type="text" id="ch1Label" maxlength="16" class="text-input chdef-label" placeholder="450 nm">
+            <input type="number" id="ch1Wavelength" min="300" max="1000" value="450" class="text-input chdef-wl" title="Peak wavelength (nm)">
+            <span class="chdef-wl-unit">nm</span>
+            <input type="color" id="ch1Color" class="chdef-color" value="#2196f3">
+        </div>
+        <div class="chdef-row">
+            <label class="chdef-enable"><input type="checkbox" id="ch2Enabled" checked> <span class="chdef-id">Ch2</span></label>
+            <input type="text" id="ch2Label" maxlength="16" class="text-input chdef-label" placeholder="660 nm">
+            <input type="number" id="ch2Wavelength" min="300" max="1000" value="660" class="text-input chdef-wl" title="Peak wavelength (nm)">
+            <span class="chdef-wl-unit">nm</span>
+            <input type="color" id="ch2Color" class="chdef-color" value="#e53935">
+        </div>
+        <div class="chdef-row">
+            <label class="chdef-enable"><input type="checkbox" id="ch3Enabled" checked> <span class="chdef-id">Ch3</span></label>
+            <input type="text" id="ch3Label" maxlength="16" class="text-input chdef-label" placeholder="730 nm">
+            <input type="number" id="ch3Wavelength" min="300" max="1000" value="730" class="text-input chdef-wl" title="Peak wavelength (nm)">
+            <span class="chdef-wl-unit">nm</span>
+            <input type="color" id="ch3Color" class="chdef-color" value="#7e1010">
+        </div>
+        <div class="form-actions">
+            <button class="btn btn-small" id="btnSaveChannelDefs">Save Channel Definitions</button>
+            <button class="btn btn-small btn-secondary" id="btnResetChannelDefs">Reset to defaults</button>
+        </div>
+    </div>
+
+    <!-- Intensity Range -->
+    <div class="card locked-setting" id="intensityRangeCard">
+        <h2>Intensity Range</h2>
+        <p class="hint">Upper limit for the intensity sliders on the Setup and Calibration tabs. Default is 2000 (about half of the full 12-bit range). Lower values make the sliders easier to adjust for low-light experiments.</p>
+        <div class="chdef-row">
+            <label>Max PWM (1–4095):</label>
+            <input type="number" id="intensityMaxInput" min="1" max="4095" value="2000" class="chdef-wl" style="width: 5rem; text-align: right;">
+        </div>
+        <div class="form-actions">
+            <button class="btn btn-small" id="btnSaveIntensityMax">Save Intensity Range</button>
+        </div>
+    </div>
+
+    <!-- Temperature Calibration -->
+    <div class="card locked-setting" id="tempCalCard">
+        <h2>Temperature Calibration</h2>
+        <p class="hint">DS18B20 sensors are factory-calibrated to ±0.5 °C. A single additive offset is enough to align this device to a reference thermometer placed in the same air pocket. The offset is applied to every temperature shown in the UI and saved to run logs (and recorded in the metadata block of each CSV).</p>
+        <div class="cal-row">
+            <span class="cal-row-lbl">Raw sensor</span>
+            <span class="cal-row-val" id="tcRaw">-- °C</span>
+        </div>
+        <div class="cal-row">
+            <span class="cal-row-lbl">Calibrated</span>
+            <span class="cal-row-val" id="tcCal">-- °C</span>
+        </div>
+        <div class="cal-row">
+            <span class="cal-row-lbl">Offset</span>
+            <input type="number" id="tcOffset" step="0.05" min="-5" max="5" value="0.00" class="text-input" style="width:6rem; text-align:right;">
+            <span style="margin-left:.3rem;">°C</span>
+            <button class="btn btn-tiny" id="btnSaveTempOffset">Save</button>
+        </div>
+        <div class="cal-row" style="margin-top:.4rem;">
+            <span class="cal-row-lbl">Reference</span>
+            <input type="number" id="tcReference" step="0.1" min="-20" max="80" placeholder="e.g. 25.0" class="text-input" style="width:6rem; text-align:right;">
+            <span style="margin-left:.3rem;">°C</span>
+            <button class="btn btn-tiny" id="btnComputeTempOffset">Compute &amp; Save</button>
+        </div>
+        <p class="hint" style="margin-top:.3rem">Enter the temperature shown by a trusted thermometer in the same air space, then click <strong>Compute &amp; Save</strong>. The offset is set to <em>reference − raw</em>, clamped to ±5 °C. Use the offset field directly if you already know the correction.</p>
+    </div>
+
+    <!-- Temperature & Fan -->
+    <div class="card locked-setting" id="tempFanSettingsCard">
+        <h2>Temperature &amp; Fan</h2>
+        <p class="hint">DS18B20 sensor on GPIO 4. Fan driven via the 4th MOSFET channel (GPIO 27); PWM-switches the fan's 12 V supply, so use a plain 2- or 3-pin 12 V fan.</p>
+        <div class="fan-controls">
+            <div class="slider-group" id="fanSpeedGroup">
+                <label>
+                    <span>Fan Speed</span>
+                    <input type="range" id="sliderFanSpeed" min="0" max="100" step="0.1" value="100" class="slider accent">
+                    <span class="slider-vals">
+                        <input type="number" id="numFanSpeed" min="0" max="100" step="0.1" value="100" class="pwm-num-input">
+                        <span class="sci-val">%</span>
+                    </span>
+                </label>
+            </div>
+            <button class="btn btn-small" id="btnApplyFan">Apply Fan Settings</button>
+            <p class="hint" style="margin-top:.3rem">Set the fan speed and click <strong>Apply Fan Settings</strong>. 0&#8239;% turns the fan off. Changing it during an experiment may affect thermal conditions, so a confirmation is required.</p>
+        </div>
+    </div>
+
+    <!-- Run Logs (persistent per-experiment temperature traces) -->
+    <div class="card" id="runLogsCard">
+        <h2>Run Logs</h2>
+        <p class="hint">Each experiment (manual Start or autostart) writes a CSV file to flash with metadata header (channel intensities, mode, durations, preset name) and the per-minute temperature trace. Files are numbered sequentially (Run #1, #2, …) and survive power-cycles. Up to 30 runs are kept; the oldest is auto-deleted when full.</p>
+        <table class="runlogs-table">
+            <thead>
+                <tr><th>Run</th><th>Size</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="runLogsList">
+                <tr><td colspan="3" class="hint">Loading&hellip;</td></tr>
+            </tbody>
+        </table>
+        <div class="form-actions">
+            <button class="btn btn-small" id="btnRefreshRunLogs">Refresh</button>
+            <button class="btn btn-small btn-secondary" id="btnDeleteAllRuns">Delete all</button>
+        </div>
+    </div>
+
+    <!-- Safety lock note for fan -->
+    <div class="hint" style="padding: 0 1.1rem .3rem; color: var(--text-dim); font-size:.72rem;">
+        Tip: Fan changes require explicit confirmation to prevent accidental modifications during experiments.
+    </div>
+
+    <div class="card">
+        <h2>About</h2>
+        <p class="hint">
+            <strong>Helios</strong> v0.1<br>
+            ESP32 + tri-channel analog PWM (12-bit) cell-culture illuminator<br>
+            Default LED set: 450 / 660 / 730 nm tri-spectrum strip<br>
+            WiFi AP: Helios001 / Helios001<br>
+            URL: <code>http://helios.local/</code> &nbsp;or&nbsp; <code>http://192.168.4.1/</code>
+        </p>
+    </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!--  TAB: Calibration                                                      -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<section id="tab-calibration" class="tab-content">
+    <!-- Live preview: drives LEDs in constant mode without recording a run -->
+    <div class="card" id="calLiveCard">
+        <h2>Live Preview</h2>
+        <p class="hint">Drive the LEDs directly while you measure with the spectroradiometer &mdash; no Start/Stop, no run log. Turn this <em>off</em> before starting a real experiment.</p>
+        <label class="checkbox-label" style="display:flex; align-items:center; gap:.5rem; margin:.4rem 0 .8rem;">
+            <input type="checkbox" id="chkLiveMode">
+            <span><strong>Live mode</strong> (LEDs follow sliders in real time)</span>
+        </label>
+        <div id="liveSliders" style="opacity:.4; pointer-events:none;">
+            <div class="slider-group" data-live-ch="1">
+                <label>
+                    <span class="ch-label ch-1" id="liveLabel1">Channel 1</span>
+                    <input type="range" id="liveCh1" min="0" max="4095" value="0" class="slider">
+                    <span class="slider-vals"><span class="pwm-stepper"><button type="button" class="stepper-btn" data-step="-1" data-target="liveCh1Num" aria-label="Decrease" tabindex="-1">&minus;</button><input type="number" id="liveCh1Num" min="0" max="4095" value="0" class="pwm-num-input" title="Raw PWM (0–4095)"><button type="button" class="stepper-btn" data-step="1" data-target="liveCh1Num" aria-label="Increase" tabindex="-1">+</button></span><span class="sci-val" id="liveCh1Sci"></span></span>
+                </label>
+            </div>
+            <div class="slider-group" data-live-ch="2">
+                <label>
+                    <span class="ch-label ch-2" id="liveLabel2">Channel 2</span>
+                    <input type="range" id="liveCh2" min="0" max="4095" value="0" class="slider">
+                    <span class="slider-vals"><span class="pwm-stepper"><button type="button" class="stepper-btn" data-step="-1" data-target="liveCh2Num" aria-label="Decrease" tabindex="-1">&minus;</button><input type="number" id="liveCh2Num" min="0" max="4095" value="0" class="pwm-num-input" title="Raw PWM (0–4095)"><button type="button" class="stepper-btn" data-step="1" data-target="liveCh2Num" aria-label="Increase" tabindex="-1">+</button></span><span class="sci-val" id="liveCh2Sci"></span></span>
+                </label>
+            </div>
+            <div class="slider-group" data-live-ch="3">
+                <label>
+                    <span class="ch-label ch-3" id="liveLabel3">Channel 3</span>
+                    <input type="range" id="liveCh3" min="0" max="4095" value="0" class="slider">
+                    <span class="slider-vals"><span class="pwm-stepper"><button type="button" class="stepper-btn" data-step="-1" data-target="liveCh3Num" aria-label="Decrease" tabindex="-1">&minus;</button><input type="number" id="liveCh3Num" min="0" max="4095" value="0" class="pwm-num-input" title="Raw PWM (0–4095)"><button type="button" class="stepper-btn" data-step="1" data-target="liveCh3Num" aria-label="Increase" tabindex="-1">+</button></span><span class="sci-val" id="liveCh3Sci"></span></span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" id="calCard">
+        <h2>Calibration (AVANTES Spectroradiometer)</h2>
+        <div class="safety-lock" id="calLockBar">
+            <span class="lock-icon">&#x1f512;</span>
+            <span>Calibration is <strong>locked</strong> to prevent accidental changes.</span>
+            <button class="btn btn-tiny" id="btnUnlockCal">Unlock</button>
+        </div>
+        <div class="hidden" id="calUnlockedBar">
+            <span class="lock-icon">&#x1f513;</span>
+            <span>Editing enabled.</span>
+            <button class="btn btn-tiny" id="btnLockCal">Lock</button>
+        </div>
+        <p class="hint">
+            Enter measurement points per channel (min. 2). PWM values are in the
+            12-bit range 0–4095. Choose the fitting method:
+            <strong>Power law</strong> (irradiance = a×PWM^b, fits LED physics with few points) or
+            <strong>Piecewise-linear</strong> (more accurate when many points are available).
+            Points are entered in the current <strong>display unit</strong> (Settings &rarr; Display Unit).
+            Each unit (µmol / µW·cm⁻²) is calibrated independently &mdash; the Setup tab shows the
+            calibration for whichever unit is selected, and an uncalibrated unit reads 0 until you calibrate it.
+        </p>
+        <div class="cal-side-selector" id="calSideToggle" style="margin-bottom: .6rem;">
+            <span class="cal-side-label">Calibrating</span>
+            <button class="calside-btn" data-calside="top">Top</button>
+            <button class="calside-btn selected" data-calside="bottom">Bottom</button>
+        </div>
+        <div class="cal-mode-selector" style="margin-bottom: .6rem;">
+            <label style="font-size: .78rem; margin-right: .8rem;">
+                <input type="radio" name="calMode" value="linear" checked> Piecewise-linear
+            </label>
+            <label style="font-size: .78rem;">
+                <input type="radio" name="calMode" value="power"> Power law (a×PWM^b)
+            </label>
+        </div>
+        <div class="cal-channel" id="calChannel1">
+            <div class="cal-ch-header"><span class="ch-label ch-1" id="calLabel1">450 nm</span><button class="btn btn-tiny" id="btnAddCal1">+ Point</button></div>
+            <div id="calPoints1" class="cal-points-list"></div>
+            <canvas id="calGraph1" width="280" height="120" class="cal-graph"></canvas>
+        </div>
+
+        <div class="cal-channel" id="calChannel2">
+            <div class="cal-ch-header"><span class="ch-label ch-2" id="calLabel2">660 nm</span><button class="btn btn-tiny" id="btnAddCal2">+ Point</button></div>
+            <div id="calPoints2" class="cal-points-list"></div>
+            <canvas id="calGraph2" width="280" height="120" class="cal-graph"></canvas>
+        </div>
+
+        <div class="cal-channel" id="calChannel3">
+            <div class="cal-ch-header"><span class="ch-label ch-3" id="calLabel3">730 nm</span><button class="btn btn-tiny" id="btnAddCal3">+ Point</button></div>
+            <div id="calPoints3" class="cal-points-list"></div>
+            <canvas id="calGraph3" width="280" height="120" class="cal-graph"></canvas>
+        </div>
+
+        <div class="cal-actions" style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.6rem;">
+            <button class="btn btn-small" id="btnSaveCal">Save Calibration</button>
+            <button class="btn btn-small btn-secondary" id="btnExportCal">Export</button>
+            <button class="btn btn-small btn-secondary" id="btnImportCal">Import</button>
+            <input type="file" id="calImportFile" accept=".json" style="display:none">
+        </div>
+    </div>
+</section>
+
+<!-- ── Toast notification ──────────────────────────────────────────────── -->
+<div id="toast" class="toast hidden"></div>
+
+<script src="mock-api.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
