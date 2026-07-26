@@ -281,11 +281,9 @@
     <div class="card locked-setting" id="deviceNameCard">
         <h2>Device Name</h2>
         <p class="hint">Name shown in the header. Give each unit a unique name (e.g. Helios 1).</p>
-        <div class="slider-group">
-            <label>
-                Display Name
-                <input type="text" id="deviceNameInput" maxlength="32" placeholder="Helios">
-            </label>
+        <div class="form-field">
+            <label for="deviceNameInput">Display Name</label>
+            <input type="text" id="deviceNameInput" maxlength="32" placeholder="Helios" class="text-input">
         </div>
         <div class="form-actions">
             <button class="btn btn-small" id="btnSaveDeviceName">Save Name</button>
@@ -298,15 +296,13 @@
         <h2>WiFi Access Point</h2>
         <p class="hint">Change network name and password. Restart required after saving.</p>
         <p class="hint">Plain text input — this is a single-user lab tool on an isolated AP.</p>
-        <div class="slider-group">
-            <label>
-                Network Name (SSID)
-                <input type="text" id="wifiSsid" maxlength="32" placeholder="Helios001">
-            </label>
-            <label>
-                Password (min 8 characters)
-                <input type="text" id="wifiPassword" minlength="8" maxlength="63" placeholder="Helios001">
-            </label>
+        <div class="form-field">
+            <label for="wifiSsid">Network Name (SSID)</label>
+            <input type="text" id="wifiSsid" maxlength="32" placeholder="Helios001" class="text-input">
+        </div>
+        <div class="form-field">
+            <label for="wifiPassword">Password (min 8 characters)</label>
+            <input type="text" id="wifiPassword" minlength="8" maxlength="63" placeholder="Helios001" class="text-input">
         </div>
         <div class="form-actions">
             <button class="btn btn-small" id="btnSaveWiFi">Save WiFi Settings</button>

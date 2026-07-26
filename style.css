@@ -327,6 +327,14 @@ header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: .5px; }
 .preset-item button.del { color: var(--stop); }
 
 /* ── Text input ────────────────────────────────────────────────────────── */
+.form-field { margin-bottom: .6rem; }
+.form-field label {
+    display: block;
+    font-size: .82rem;
+    font-weight: 600;
+    margin-bottom: .25rem;
+    color: var(--text);
+}
 .text-input {
     width: 100%;
     padding: .5rem .6rem;
