@@ -62,57 +62,63 @@
         <p class="hint">Enter PWM or irradiance — the other field updates from calibration data. Value in parentheses is the converted unit (display-only).</p>
 
         <div class="slider-group" id="sliderGroup1">
-            <span class="ch-label ch-1" id="label1">450 nm</span>
-            <input type="range" id="slider1" min="0" max="4095" value="0" class="slider ch1">
-            <div class="slider-vals">
-                <div class="dual-stepper">
-                    <button type="button" class="stepper-btn" data-step="-1" data-target="num1" aria-label="Decrease PWM" tabindex="-1">&minus;</button>
-                    <input type="number" id="num1" min="0" max="4095" value="0" class="pwm-num-input" title="Raw PWM (0–4095)">
-                    <input type="number" id="sci1" min="0" step="0.01" value="0" class="sci-input" title="Irradiance (editable — updates PWM)">
-                    <button type="button" class="stepper-btn" data-step="1" data-target="num1" aria-label="Increase PWM" tabindex="-1">+</button>
-                    <span class="sci-converted" id="sciConverted1"></span>
+            <label>
+                <span class="ch-label ch-1" id="label1">450 nm</span>
+                <input type="range" id="slider1" min="0" max="4095" value="0" class="slider ch1">
+                <div class="slider-vals">
+                    <div class="dual-stepper">
+                        <button type="button" class="stepper-btn" data-step="-1" data-target="num1" aria-label="Decrease PWM" tabindex="-1">&minus;</button>
+                        <input type="number" id="num1" min="0" max="4095" value="0" class="pwm-num-input" title="Raw PWM (0–4095)">
+                        <input type="number" id="sci1" min="0" step="0.01" value="0" class="sci-input" title="Irradiance (editable — updates PWM)">
+                        <button type="button" class="stepper-btn" data-step="1" data-target="num1" aria-label="Increase PWM" tabindex="-1">+</button>
+                        <span class="sci-converted" id="sciConverted1"></span>
+                    </div>
+                    <div class="dual-labels">
+                        <span class="dual-label-pwm">PWM</span>
+                        <span class="dual-label-sci" id="sciLabel1">µmol m⁻² s⁻¹</span>
+                    </div>
                 </div>
-                <div class="dual-labels">
-                    <span class="dual-label-pwm">PWM</span>
-                    <span class="dual-label-sci" id="sciLabel1">µmol m⁻² s⁻¹</span>
-                </div>
-            </div>
+            </label>
         </div>
 
         <div class="slider-group" id="sliderGroup2">
-            <span class="ch-label ch-2" id="label2">660 nm</span>
-            <input type="range" id="slider2" min="0" max="4095" value="0" class="slider ch2">
-            <div class="slider-vals">
-                <div class="dual-stepper">
-                    <button type="button" class="stepper-btn" data-step="-1" data-target="num2" aria-label="Decrease PWM" tabindex="-1">&minus;</button>
-                    <input type="number" id="num2" min="0" max="4095" value="0" class="pwm-num-input" title="Raw PWM (0–4095)">
-                    <input type="number" id="sci2" min="0" step="0.01" value="0" class="sci-input" title="Irradiance (editable — updates PWM)">
-                    <button type="button" class="stepper-btn" data-step="1" data-target="num2" aria-label="Increase PWM" tabindex="-1">+</button>
-                    <span class="sci-converted" id="sciConverted2"></span>
+            <label>
+                <span class="ch-label ch-2" id="label2">660 nm</span>
+                <input type="range" id="slider2" min="0" max="4095" value="0" class="slider ch2">
+                <div class="slider-vals">
+                    <div class="dual-stepper">
+                        <button type="button" class="stepper-btn" data-step="-1" data-target="num2" aria-label="Decrease PWM" tabindex="-1">&minus;</button>
+                        <input type="number" id="num2" min="0" max="4095" value="0" class="pwm-num-input" title="Raw PWM (0–4095)">
+                        <input type="number" id="sci2" min="0" step="0.01" value="0" class="sci-input" title="Irradiance (editable — updates PWM)">
+                        <button type="button" class="stepper-btn" data-step="1" data-target="num2" aria-label="Increase PWM" tabindex="-1">+</button>
+                        <span class="sci-converted" id="sciConverted2"></span>
+                    </div>
+                    <div class="dual-labels">
+                        <span class="dual-label-pwm">PWM</span>
+                        <span class="dual-label-sci" id="sciLabel2">µmol m⁻² s⁻¹</span>
+                    </div>
                 </div>
-                <div class="dual-labels">
-                    <span class="dual-label-pwm">PWM</span>
-                    <span class="dual-label-sci" id="sciLabel2">µmol m⁻² s⁻¹</span>
-                </div>
-            </div>
+            </label>
         </div>
 
         <div class="slider-group" id="sliderGroup3">
-            <span class="ch-label ch-3" id="label3">730 nm</span>
-            <input type="range" id="slider3" min="0" max="4095" value="0" class="slider ch3">
-            <div class="slider-vals">
-                <div class="dual-stepper">
-                    <button type="button" class="stepper-btn" data-step="-1" data-target="num3" aria-label="Decrease PWM" tabindex="-1">&minus;</button>
-                    <input type="number" id="num3" min="0" max="4095" value="0" class="pwm-num-input" title="Raw PWM (0–4095)">
-                    <input type="number" id="sci3" min="0" step="0.01" value="0" class="sci-input" title="Irradiance (editable — updates PWM)">
-                    <button type="button" class="stepper-btn" data-step="1" data-target="num3" aria-label="Increase PWM" tabindex="-1">+</button>
-                    <span class="sci-converted" id="sciConverted3"></span>
+            <label>
+                <span class="ch-label ch-3" id="label3">730 nm</span>
+                <input type="range" id="slider3" min="0" max="4095" value="0" class="slider ch3">
+                <div class="slider-vals">
+                    <div class="dual-stepper">
+                        <button type="button" class="stepper-btn" data-step="-1" data-target="num3" aria-label="Decrease PWM" tabindex="-1">&minus;</button>
+                        <input type="number" id="num3" min="0" max="4095" value="0" class="pwm-num-input" title="Raw PWM (0–4095)">
+                        <input type="number" id="sci3" min="0" step="0.01" value="0" class="sci-input" title="Irradiance (editable — updates PWM)">
+                        <button type="button" class="stepper-btn" data-step="1" data-target="num3" aria-label="Increase PWM" tabindex="-1">+</button>
+                        <span class="sci-converted" id="sciConverted3"></span>
+                    </div>
+                    <div class="dual-labels">
+                        <span class="dual-label-pwm">PWM</span>
+                        <span class="dual-label-sci" id="sciLabel3">µmol m⁻² s⁻¹</span>
+                    </div>
                 </div>
-                <div class="dual-labels">
-                    <span class="dual-label-pwm">PWM</span>
-                    <span class="dual-label-sci" id="sciLabel3">µmol m⁻² s⁻¹</span>
-                </div>
-            </div>
+            </label>
         </div>
 
         <!-- Live colour preview (mixed approximation of the three channels) -->
@@ -365,7 +371,11 @@
         <p class="hint">Upper limit for intensity sliders. Default 2000 (half of 12-bit range). Lower values give finer control for low-light experiments.</p>
         <div class="chdef-row">
             <label>Max PWM (1–4095):</label>
-            <input type="number" id="intensityMaxInput" min="1" max="4095" value="2000" class="chdef-wl" style="width: 5rem; text-align: right;">
+            <span class="pwm-stepper">
+                <button type="button" class="stepper-btn" data-step="-1" data-target="intensityMaxInput" aria-label="Decrease max PWM" tabindex="-1">&minus;</button>
+                <input type="number" id="intensityMaxInput" min="1" max="4095" value="2000" class="chdef-wl" style="width: 5rem; text-align: right;">
+                <button type="button" class="stepper-btn" data-step="1" data-target="intensityMaxInput" aria-label="Increase max PWM" tabindex="-1">+</button>
+            </span>
         </div>
         <div class="form-actions">
             <button class="btn btn-small" id="btnSaveIntensityMax">Save Intensity Range</button>
@@ -386,13 +396,21 @@
         </div>
         <div class="cal-row">
             <span class="cal-row-lbl">Offset</span>
-            <input type="number" id="tcOffset" step="0.05" min="-5" max="5" value="0.00" class="text-input" style="width:6rem; text-align:right;">
+            <span class="pwm-stepper">
+                <button type="button" class="stepper-btn" data-step="-0.05" data-target="tcOffset" aria-label="Decrease offset" tabindex="-1">&minus;</button>
+                <input type="number" id="tcOffset" step="0.05" min="-5" max="5" value="0.00" class="text-input" style="width:5rem; text-align:right;">
+                <button type="button" class="stepper-btn" data-step="0.05" data-target="tcOffset" aria-label="Increase offset" tabindex="-1">+</button>
+            </span>
             <span style="margin-left:.3rem;">°C</span>
             <button class="btn btn-tiny" id="btnSaveTempOffset">Save</button>
         </div>
         <div class="cal-row" style="margin-top:.4rem;">
             <span class="cal-row-lbl">Reference</span>
-            <input type="number" id="tcReference" step="0.1" min="-20" max="80" placeholder="e.g. 25.0" class="text-input" style="width:6rem; text-align:right;">
+            <span class="pwm-stepper">
+                <button type="button" class="stepper-btn" data-step="-0.1" data-target="tcReference" aria-label="Decrease reference" tabindex="-1">&minus;</button>
+                <input type="number" id="tcReference" step="0.1" min="-20" max="80" placeholder="e.g. 25.0" class="text-input" style="width:5rem; text-align:right;">
+                <button type="button" class="stepper-btn" data-step="0.1" data-target="tcReference" aria-label="Increase reference" tabindex="-1">+</button>
+            </span>
             <span style="margin-left:.3rem;">°C</span>
             <button class="btn btn-tiny" id="btnComputeTempOffset">Compute &amp; Save</button>
         </div>
@@ -408,8 +426,12 @@
                     <span>Fan Speed</span>
                     <input type="range" id="sliderFanSpeed" min="0" max="100" step="0.1" value="100" class="slider accent">
                     <span class="slider-vals">
-                        <input type="number" id="numFanSpeed" min="0" max="100" step="0.1" value="100" class="pwm-num-input">
-                        <span class="sci-val">%</span>
+                        <span class="pwm-stepper">
+                            <button type="button" class="stepper-btn" data-step="-1" data-target="numFanSpeed" aria-label="Decrease fan speed" tabindex="-1">&minus;</button>
+                            <input type="number" id="numFanSpeed" min="0" max="100" step="0.1" value="100" class="pwm-num-input">
+                            <button type="button" class="stepper-btn" data-step="1" data-target="numFanSpeed" aria-label="Increase fan speed" tabindex="-1">+</button>
+                            <span class="sci-val" style="margin-left:.25rem">%</span>
+                        </span>
                     </span>
                 </label>
             </div>

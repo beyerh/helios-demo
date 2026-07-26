@@ -382,6 +382,20 @@ input[type="number"]::-webkit-outer-spin-button {
     -moz-appearance: textfield;
     appearance: textfield;
 }
+/* Any number input wrapped in a .pwm-stepper gets custom +/- buttons,
+   so suppress the browser's native spinner arrows everywhere. */
+.pwm-stepper input[type="number"]::-webkit-inner-spin-button,
+.pwm-stepper input[type="number"]::-webkit-outer-spin-button,
+.chdef-wl::-webkit-inner-spin-button,
+.chdef-wl::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.pwm-stepper input[type="number"],
+.chdef-wl {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
 
 /* ── PWM number input ──────────────────────────────────────────────── */
 .pwm-num-input {
