@@ -138,13 +138,13 @@
     // ── Temperature & fan state ───────────────────────────────────────────────
     const tempState = {
         hasSensor: true,
-        current: 25.0,
+        current: 37.0,
         fanMode: 'auto',
         fanSpeed: 100,
         fanRunning: false,
     };
     let tempLog = data.tempLog || [];  // [{t, c}]
-    let tempBase = 25.0;
+    let tempBase = 37.0;
     let lastLoggedMinute = tempLog.length > 0 ? tempLog[tempLog.length - 1].t : -1;
 
     // ── Run logs (in-memory, not persisted) ───────────────────────────────────
@@ -346,7 +346,7 @@
             var equilibrium = 37.0 + pwmFrac * 1.0;  // 37.0 → 38.0
             tempBase += (equilibrium - tempBase) * 0.08;
         } else {
-            tempBase += (24.0 - tempBase) * 0.05;
+            tempBase += (37.0 - tempBase) * 0.05;
         }
         const noise = (Math.random() - 0.5) * 0.3;
         tempState.current = Math.round((tempBase + noise) * 10) / 10;
